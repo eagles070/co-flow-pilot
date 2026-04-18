@@ -23,8 +23,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Users, RefreshCw } from "lucide-react";
+import { Search, Users, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import {
   ORDER_SOURCES,
   ORDER_STATUSES,
@@ -34,16 +44,23 @@ import {
   type OrderStatus,
 } from "@/lib/order-status";
 import { NewOrderDialog } from "@/components/orders/NewOrderDialog";
+import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 
 export const Route = createFileRoute("/_app/orders")({
   component: OrdersPage,
 });
+
+interface OrderItem {
+  product_name: string;
+  quantity: number;
+}
 
 interface OrderRow {
   id: string;
   reference: string;
   customer_name: string;
   customer_phone: string;
+  shipping_address: string | null;
   city: string | null;
   total_amount: number;
   status: OrderStatus;
@@ -51,6 +68,7 @@ interface OrderRow {
   store_id: string | null;
   agent_id: string | null;
   created_at: string;
+  order_items: OrderItem[];
 }
 
 interface AgentOpt {
@@ -79,11 +97,17 @@ function OrdersPage() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [bulkAgent, setBulkAgent] = useState<string>("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
     const [ordersRes, agentsRes, storesRes] = await Promise.all([
-      supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase
+        .from("orders")
+        .select("*, order_items(product_name, quantity)")
+        .order("created_at", { ascending: false })
+        .limit(500),
       supabase
         .from("user_roles")
         .select("user_id, profiles:user_id(id, full_name, email)")
@@ -92,7 +116,7 @@ function OrdersPage() {
     ]);
 
     if (ordersRes.error) toast.error(ordersRes.error.message);
-    setOrders((ordersRes.data ?? []) as OrderRow[]);
+    setOrders((ordersRes.data ?? []) as unknown as OrderRow[]);
 
     const ag: AgentOpt[] = [];
     const seen = new Set<string>();
@@ -193,6 +217,18 @@ function OrdersPage() {
     );
     setSelected(new Set());
     setBulkAgent("");
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    const { error } = await supabase.from("orders").delete().eq("id", deletingId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setOrders((prev) => prev.filter((o) => o.id !== deletingId));
+    toast.success("Order deleted");
+    setDeletingId(null);
   };
 
   const agentName = (id: string | null) => {
@@ -311,24 +347,27 @@ function OrdersPage() {
                 <TableHead>Reference</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Phone</TableHead>
+                <TableHead>Address</TableHead>
                 <TableHead>City</TableHead>
+                <TableHead>Products</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Agent</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
+                {canManage && <TableHead className="w-24 text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={canManage ? 10 : 9} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={canManage ? 13 : 11} className="py-8 text-center text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canManage ? 10 : 9} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={canManage ? 13 : 11} className="py-8 text-center text-muted-foreground">
                     No orders match your filters.
                   </TableCell>
                 </TableRow>
@@ -346,7 +385,28 @@ function OrdersPage() {
                     <TableCell className="font-mono text-xs">{o.reference}</TableCell>
                     <TableCell className="font-medium">{o.customer_name}</TableCell>
                     <TableCell>{o.customer_phone}</TableCell>
+                    <TableCell className="max-w-[180px] truncate text-sm text-muted-foreground" title={o.shipping_address ?? ""}>
+                      {o.shipping_address ?? "—"}
+                    </TableCell>
                     <TableCell>{o.city ?? "—"}</TableCell>
+                    <TableCell className="max-w-[200px] text-sm">
+                      {o.order_items && o.order_items.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {o.order_items.slice(0, 2).map((it, idx) => (
+                            <div key={idx} className="truncate" title={`${it.product_name} × ${it.quantity}`}>
+                              <span className="text-muted-foreground">{it.quantity}×</span> {it.product_name}
+                            </div>
+                          ))}
+                          {o.order_items.length > 2 && (
+                            <div className="text-xs text-muted-foreground">
+                              +{o.order_items.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>{Number(o.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
@@ -376,6 +436,28 @@ function OrdersPage() {
                     <TableCell className="text-xs text-muted-foreground">
                       {new Date(o.created_at).toLocaleDateString()}
                     </TableCell>
+                    {canManage && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setEditingId(o.id)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setDeletingId(o.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -383,6 +465,33 @@ function OrdersPage() {
           </Table>
         </div>
       </Card>
+
+      <EditOrderDialog
+        orderId={editingId}
+        stores={stores}
+        onClose={() => setEditingId(null)}
+        onSaved={fetchAll}
+      />
+
+      <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. All line items and history for this order will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
