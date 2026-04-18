@@ -23,8 +23,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Users, RefreshCw } from "lucide-react";
+import { Search, Users, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import {
   ORDER_SOURCES,
   ORDER_STATUSES,
@@ -34,6 +44,7 @@ import {
   type OrderStatus,
 } from "@/lib/order-status";
 import { NewOrderDialog } from "@/components/orders/NewOrderDialog";
+import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 
 export const Route = createFileRoute("/_app/orders")({
   component: OrdersPage,
