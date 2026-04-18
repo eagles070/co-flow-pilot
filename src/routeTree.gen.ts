@@ -9,51 +9,382 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppUsersRouteImport } from './routes/_app.users'
+import { Route as AppTeamRouteImport } from './routes/_app.team'
+import { Route as AppSourcingRouteImport } from './routes/_app.sourcing'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppProductsRouteImport } from './routes/_app.products'
+import { Route as AppOrdersRouteImport } from './routes/_app.orders'
+import { Route as AppLogsRouteImport } from './routes/_app.logs'
+import { Route as AppInventoryRouteImport } from './routes/_app.inventory'
+import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
+import { Route as AppFinanceRouteImport } from './routes/_app.finance'
+import { Route as AppDeliveryRouteImport } from './routes/_app.delivery'
+import { Route as AppCallCenterRouteImport } from './routes/_app.call-center'
+import { Route as AppBlacklistRouteImport } from './routes/_app.blacklist'
 
-const IndexRoute = IndexRouteImport.update({
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
+} as any)
+const AppUsersRoute = AppUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSourcingRoute = AppSourcingRouteImport.update({
+  id: '/sourcing',
+  path: '/sourcing',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProductsRoute = AppProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrdersRoute = AppOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLogsRoute = AppLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInventoryRoute = AppInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinanceRoute = AppFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDeliveryRoute = AppDeliveryRouteImport.update({
+  id: '/delivery',
+  path: '/delivery',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCallCenterRoute = AppCallCenterRouteImport.update({
+  id: '/call-center',
+  path: '/call-center',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBlacklistRoute = AppBlacklistRouteImport.update({
+  id: '/blacklist',
+  path: '/blacklist',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
+  '/auth': typeof AuthRoute
+  '/blacklist': typeof AppBlacklistRoute
+  '/call-center': typeof AppCallCenterRoute
+  '/delivery': typeof AppDeliveryRoute
+  '/finance': typeof AppFinanceRoute
+  '/integrations': typeof AppIntegrationsRoute
+  '/inventory': typeof AppInventoryRoute
+  '/logs': typeof AppLogsRoute
+  '/orders': typeof AppOrdersRoute
+  '/products': typeof AppProductsRoute
+  '/settings': typeof AppSettingsRoute
+  '/sourcing': typeof AppSourcingRoute
+  '/team': typeof AppTeamRoute
+  '/users': typeof AppUsersRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/blacklist': typeof AppBlacklistRoute
+  '/call-center': typeof AppCallCenterRoute
+  '/delivery': typeof AppDeliveryRoute
+  '/finance': typeof AppFinanceRoute
+  '/integrations': typeof AppIntegrationsRoute
+  '/inventory': typeof AppInventoryRoute
+  '/logs': typeof AppLogsRoute
+  '/orders': typeof AppOrdersRoute
+  '/products': typeof AppProductsRoute
+  '/settings': typeof AppSettingsRoute
+  '/sourcing': typeof AppSourcingRoute
+  '/team': typeof AppTeamRoute
+  '/users': typeof AppUsersRoute
+  '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_app/blacklist': typeof AppBlacklistRoute
+  '/_app/call-center': typeof AppCallCenterRoute
+  '/_app/delivery': typeof AppDeliveryRoute
+  '/_app/finance': typeof AppFinanceRoute
+  '/_app/integrations': typeof AppIntegrationsRoute
+  '/_app/inventory': typeof AppInventoryRoute
+  '/_app/logs': typeof AppLogsRoute
+  '/_app/orders': typeof AppOrdersRoute
+  '/_app/products': typeof AppProductsRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/sourcing': typeof AppSourcingRoute
+  '/_app/team': typeof AppTeamRoute
+  '/_app/users': typeof AppUsersRoute
+  '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/blacklist'
+    | '/call-center'
+    | '/delivery'
+    | '/finance'
+    | '/integrations'
+    | '/inventory'
+    | '/logs'
+    | '/orders'
+    | '/products'
+    | '/settings'
+    | '/sourcing'
+    | '/team'
+    | '/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/auth'
+    | '/blacklist'
+    | '/call-center'
+    | '/delivery'
+    | '/finance'
+    | '/integrations'
+    | '/inventory'
+    | '/logs'
+    | '/orders'
+    | '/products'
+    | '/settings'
+    | '/sourcing'
+    | '/team'
+    | '/users'
+    | '/'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/auth'
+    | '/_app/blacklist'
+    | '/_app/call-center'
+    | '/_app/delivery'
+    | '/_app/finance'
+    | '/_app/integrations'
+    | '/_app/inventory'
+    | '/_app/logs'
+    | '/_app/orders'
+    | '/_app/products'
+    | '/_app/settings'
+    | '/_app/sourcing'
+    | '/_app/team'
+    | '/_app/users'
+    | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/users': {
+      id: '/_app/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AppUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/team': {
+      id: '/_app/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AppTeamRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/sourcing': {
+      id: '/_app/sourcing'
+      path: '/sourcing'
+      fullPath: '/sourcing'
+      preLoaderRoute: typeof AppSourcingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/products': {
+      id: '/_app/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof AppProductsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/orders': {
+      id: '/_app/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof AppOrdersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/logs': {
+      id: '/_app/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof AppLogsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inventory': {
+      id: '/_app/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof AppInventoryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/integrations': {
+      id: '/_app/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AppIntegrationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/finance': {
+      id: '/_app/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof AppFinanceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/delivery': {
+      id: '/_app/delivery'
+      path: '/delivery'
+      fullPath: '/delivery'
+      preLoaderRoute: typeof AppDeliveryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/call-center': {
+      id: '/_app/call-center'
+      path: '/call-center'
+      fullPath: '/call-center'
+      preLoaderRoute: typeof AppCallCenterRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/blacklist': {
+      id: '/_app/blacklist'
+      path: '/blacklist'
+      fullPath: '/blacklist'
+      preLoaderRoute: typeof AppBlacklistRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppBlacklistRoute: typeof AppBlacklistRoute
+  AppCallCenterRoute: typeof AppCallCenterRoute
+  AppDeliveryRoute: typeof AppDeliveryRoute
+  AppFinanceRoute: typeof AppFinanceRoute
+  AppIntegrationsRoute: typeof AppIntegrationsRoute
+  AppInventoryRoute: typeof AppInventoryRoute
+  AppLogsRoute: typeof AppLogsRoute
+  AppOrdersRoute: typeof AppOrdersRoute
+  AppProductsRoute: typeof AppProductsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppSourcingRoute: typeof AppSourcingRoute
+  AppTeamRoute: typeof AppTeamRoute
+  AppUsersRoute: typeof AppUsersRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppBlacklistRoute: AppBlacklistRoute,
+  AppCallCenterRoute: AppCallCenterRoute,
+  AppDeliveryRoute: AppDeliveryRoute,
+  AppFinanceRoute: AppFinanceRoute,
+  AppIntegrationsRoute: AppIntegrationsRoute,
+  AppInventoryRoute: AppInventoryRoute,
+  AppLogsRoute: AppLogsRoute,
+  AppOrdersRoute: AppOrdersRoute,
+  AppProductsRoute: AppProductsRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppSourcingRoute: AppSourcingRoute,
+  AppTeamRoute: AppTeamRoute,
+  AppUsersRoute: AppUsersRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
