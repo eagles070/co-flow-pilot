@@ -219,6 +219,18 @@ function OrdersPage() {
     setBulkAgent("");
   };
 
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    const { error } = await supabase.from("orders").delete().eq("id", deletingId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setOrders((prev) => prev.filter((o) => o.id !== deletingId));
+    toast.success("Order deleted");
+    setDeletingId(null);
+  };
+
   const agentName = (id: string | null) => {
     if (!id) return "—";
     const a = agents.find((x) => x.id === id);
