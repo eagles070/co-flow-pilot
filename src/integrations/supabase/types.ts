@@ -14,6 +14,225 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: Database["public"]["Enums"]["activity_action"]
+          created_at: string
+          description: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["activity_action"]
+          created_at?: string
+          description?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["activity_action"]
+          created_at?: string
+          description?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      blacklist: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          id: string
+          phone: string
+          reason: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          phone: string
+          reason?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          phone?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      call_attempts: {
+        Row: {
+          agent_id: string
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          note: string | null
+          order_id: string
+          outcome: Database["public"]["Enums"]["call_outcome"]
+          recall_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          note?: string | null
+          order_id: string
+          outcome: Database["public"]["Enums"]["call_outcome"]
+          recall_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          note?: string | null
+          order_id?: string
+          outcome?: Database["public"]["Enums"]["call_outcome"]
+          recall_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_attempts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deliveries: {
+        Row: {
+          carrier: string
+          created_at: string
+          delivered_at: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          picked_up_at: string | null
+          return_cost: number
+          returned_at: string | null
+          shipping_cost: number
+          status: Database["public"]["Enums"]["delivery_status"]
+          tracking_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          carrier?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          picked_up_at?: string | null
+          return_cost?: number
+          returned_at?: string | null
+          shipping_cost?: number
+          status?: Database["public"]["Enums"]["delivery_status"]
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          carrier?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          picked_up_at?: string | null
+          return_cost?: number
+          returned_at?: string | null
+          shipping_cost?: number
+          status?: Database["public"]["Enums"]["delivery_status"]
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliveries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expense_date: string
+          id: string
+          store_id: string | null
+        }
+        Insert: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_date?: string
+          id?: string
+          store_id?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_date?: string
+          id?: string
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -191,10 +410,13 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          lead_time_days: number | null
+          low_stock_threshold: number | null
           name: string
           sell_price: number
           sku: string | null
           stock: number
+          supplier_id: string | null
           updated_at: string
         }
         Insert: {
@@ -204,10 +426,13 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          lead_time_days?: number | null
+          low_stock_threshold?: number | null
           name: string
           sell_price?: number
           sku?: string | null
           stock?: number
+          supplier_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -217,13 +442,24 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          lead_time_days?: number | null
+          low_stock_threshold?: number | null
           name?: string
           sell_price?: number
           sku?: string | null
           stock?: number
+          supplier_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -254,6 +490,70 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          order_id: string | null
+          product_id: string
+          quantity: number
+          reference: string | null
+          supplier_id: string | null
+          type: Database["public"]["Enums"]["stock_movement_type"]
+          unit_cost: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          order_id?: string | null
+          product_id: string
+          quantity: number
+          reference?: string | null
+          supplier_id?: string | null
+          type: Database["public"]["Enums"]["stock_movement_type"]
+          unit_cost?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          order_id?: string | null
+          product_id?: string
+          quantity?: number
+          reference?: string | null
+          supplier_id?: string | null
+          type?: Database["public"]["Enums"]["stock_movement_type"]
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stores: {
         Row: {
@@ -288,6 +588,45 @@ export type Database = {
           type?: Database["public"]["Enums"]["store_type"]
           updated_at?: string
           url?: string | null
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -330,7 +669,42 @@ export type Database = {
       }
     }
     Enums: {
+      activity_action:
+        | "create"
+        | "update"
+        | "delete"
+        | "assign"
+        | "status_change"
+        | "login"
+        | "export"
+        | "import"
       app_role: "admin" | "moderator" | "agent" | "media_buyer"
+      call_outcome:
+        | "confirmed"
+        | "cancelled"
+        | "no_reply"
+        | "wrong_number"
+        | "postponed"
+        | "duplicate"
+        | "callback_requested"
+        | "voicemail"
+      delivery_status:
+        | "pending"
+        | "picked_up"
+        | "in_transit"
+        | "out_for_delivery"
+        | "delivered"
+        | "returned"
+        | "refused"
+        | "lost"
+      expense_category:
+        | "ads"
+        | "salaries"
+        | "rent"
+        | "shipping"
+        | "inventory"
+        | "tools"
+        | "other"
       order_source: "shopify" | "google_sheet" | "manual" | "landing_page"
       order_status:
         | "new"
@@ -345,6 +719,12 @@ export type Database = {
         | "returned"
         | "refused"
         | "postponed"
+      stock_movement_type:
+        | "purchase"
+        | "sale"
+        | "return"
+        | "adjustment"
+        | "damaged"
       store_type: "shopify" | "google_sheet" | "manual"
     }
     CompositeTypes: {
@@ -473,7 +853,46 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_action: [
+        "create",
+        "update",
+        "delete",
+        "assign",
+        "status_change",
+        "login",
+        "export",
+        "import",
+      ],
       app_role: ["admin", "moderator", "agent", "media_buyer"],
+      call_outcome: [
+        "confirmed",
+        "cancelled",
+        "no_reply",
+        "wrong_number",
+        "postponed",
+        "duplicate",
+        "callback_requested",
+        "voicemail",
+      ],
+      delivery_status: [
+        "pending",
+        "picked_up",
+        "in_transit",
+        "out_for_delivery",
+        "delivered",
+        "returned",
+        "refused",
+        "lost",
+      ],
+      expense_category: [
+        "ads",
+        "salaries",
+        "rent",
+        "shipping",
+        "inventory",
+        "tools",
+        "other",
+      ],
       order_source: ["shopify", "google_sheet", "manual", "landing_page"],
       order_status: [
         "new",
@@ -488,6 +907,13 @@ export const Constants = {
         "returned",
         "refused",
         "postponed",
+      ],
+      stock_movement_type: [
+        "purchase",
+        "sale",
+        "return",
+        "adjustment",
+        "damaged",
       ],
       store_type: ["shopify", "google_sheet", "manual"],
     },
