@@ -147,12 +147,18 @@ function OrdersPage() {
   };
 
   const updateStatus = async (id: string, status: OrderStatus) => {
-    const patch: Record<string, unknown> = { status };
-    if (status === "confirmed") patch.confirmed_at = new Date().toISOString();
-    if (status === "shipped") patch.shipped_at = new Date().toISOString();
-    if (status === "delivered") patch.delivered_at = new Date().toISOString();
-    if (status === "returned" || status === "refused")
-      patch.returned_at = new Date().toISOString();
+    const now = new Date().toISOString();
+    const patch: {
+      status: OrderStatus;
+      confirmed_at?: string;
+      shipped_at?: string;
+      delivered_at?: string;
+      returned_at?: string;
+    } = { status };
+    if (status === "confirmed") patch.confirmed_at = now;
+    if (status === "shipped") patch.shipped_at = now;
+    if (status === "delivered") patch.delivered_at = now;
+    if (status === "returned" || status === "refused") patch.returned_at = now;
 
     const { error } = await supabase.from("orders").update(patch).eq("id", id);
     if (error) {
