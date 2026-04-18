@@ -347,24 +347,27 @@ function OrdersPage() {
                 <TableHead>Reference</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Phone</TableHead>
+                <TableHead>Address</TableHead>
                 <TableHead>City</TableHead>
+                <TableHead>Products</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Agent</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
+                {canManage && <TableHead className="w-24 text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={canManage ? 10 : 9} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={canManage ? 13 : 11} className="py-8 text-center text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canManage ? 10 : 9} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={canManage ? 13 : 11} className="py-8 text-center text-muted-foreground">
                     No orders match your filters.
                   </TableCell>
                 </TableRow>
@@ -382,7 +385,28 @@ function OrdersPage() {
                     <TableCell className="font-mono text-xs">{o.reference}</TableCell>
                     <TableCell className="font-medium">{o.customer_name}</TableCell>
                     <TableCell>{o.customer_phone}</TableCell>
+                    <TableCell className="max-w-[180px] truncate text-sm text-muted-foreground" title={o.shipping_address ?? ""}>
+                      {o.shipping_address ?? "—"}
+                    </TableCell>
                     <TableCell>{o.city ?? "—"}</TableCell>
+                    <TableCell className="max-w-[200px] text-sm">
+                      {o.order_items && o.order_items.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {o.order_items.slice(0, 2).map((it, idx) => (
+                            <div key={idx} className="truncate" title={`${it.product_name} × ${it.quantity}`}>
+                              <span className="text-muted-foreground">{it.quantity}×</span> {it.product_name}
+                            </div>
+                          ))}
+                          {o.order_items.length > 2 && (
+                            <div className="text-xs text-muted-foreground">
+                              +{o.order_items.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>{Number(o.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
@@ -412,6 +436,28 @@ function OrdersPage() {
                     <TableCell className="text-xs text-muted-foreground">
                       {new Date(o.created_at).toLocaleDateString()}
                     </TableCell>
+                    {canManage && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setEditingId(o.id)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setDeletingId(o.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -419,6 +465,33 @@ function OrdersPage() {
           </Table>
         </div>
       </Card>
+
+      <EditOrderDialog
+        orderId={editingId}
+        stores={stores}
+        onClose={() => setEditingId(null)}
+        onSaved={fetchAll}
+      />
+
+      <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. All line items and history for this order will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
