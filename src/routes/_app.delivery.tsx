@@ -39,7 +39,7 @@ const SHIPPING_STATUSES = [
   "returned",
   "refused",
   "postponed",
-];
+] as const;
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   if (status === "delivered") return "default";
