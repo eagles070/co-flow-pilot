@@ -97,11 +97,17 @@ function OrdersPage() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [bulkAgent, setBulkAgent] = useState<string>("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
     const [ordersRes, agentsRes, storesRes] = await Promise.all([
-      supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase
+        .from("orders")
+        .select("*, order_items(product_name, quantity)")
+        .order("created_at", { ascending: false })
+        .limit(500),
       supabase
         .from("user_roles")
         .select("user_id, profiles:user_id(id, full_name, email)")
@@ -110,7 +116,7 @@ function OrdersPage() {
     ]);
 
     if (ordersRes.error) toast.error(ordersRes.error.message);
-    setOrders((ordersRes.data ?? []) as OrderRow[]);
+    setOrders((ordersRes.data ?? []) as unknown as OrderRow[]);
 
     const ag: AgentOpt[] = [];
     const seen = new Set<string>();
