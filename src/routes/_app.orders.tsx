@@ -50,11 +50,17 @@ export const Route = createFileRoute("/_app/orders")({
   component: OrdersPage,
 });
 
+interface OrderItem {
+  product_name: string;
+  quantity: number;
+}
+
 interface OrderRow {
   id: string;
   reference: string;
   customer_name: string;
   customer_phone: string;
+  shipping_address: string | null;
   city: string | null;
   total_amount: number;
   status: OrderStatus;
@@ -62,6 +68,7 @@ interface OrderRow {
   store_id: string | null;
   agent_id: string | null;
   created_at: string;
+  order_items: OrderItem[];
 }
 
 interface AgentOpt {
