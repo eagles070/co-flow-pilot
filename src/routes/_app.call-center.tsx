@@ -546,7 +546,7 @@ function CallCenterPage() {
             </div>
 
             <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
-              <Keyboard className="h-3 w-3" />Shortcuts: Enter Confirm · N No reply · P Postpone · C Cancel · S Skip
+              <Keyboard className="h-3 w-3" />Shortcuts: Enter Confirm · N No reply · P Postpone · C Cancel
             </div>
           </CardContent>
         </Card>
