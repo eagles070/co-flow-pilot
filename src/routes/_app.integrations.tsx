@@ -564,7 +564,27 @@ function DeliveryTab({
     onError: (e: any) => toast.error(e.message),
   });
 
-  const testMut = useMutation({
+  const updateMut = useMutation({
+    mutationFn: () =>
+      update({
+        data: {
+          id: editId!,
+          name: editName,
+          provider_type: editProviderType,
+          api_id: editApiId,
+          api_key: editApiKey,
+          base_url: editBaseApi,
+          business_id: editBusinessId,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Provider updated");
+      setEditOpen(false);
+      setEditId(null);
+      onChange();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
     mutationFn: (id: string) => test({ data: { id } }),
     onSuccess: (r: any) => {
       const status = r?.http_status;
