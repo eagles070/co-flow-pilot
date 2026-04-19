@@ -1,6 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  LayoutDashboard, ShoppingBag, PhoneCall, Truck, Package, BarChart3,
+  LayoutDashboard, ShoppingBag, PhoneCall, Truck, Package,
   Factory, Users, UserCog, Plug, Wallet, Settings, ShieldAlert, FileClock,
   Moon, Sun, LogOut, Boxes, ChevronLeft, ChevronRight,
 } from "lucide-react";
