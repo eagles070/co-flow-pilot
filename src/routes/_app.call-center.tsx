@@ -375,8 +375,9 @@ function CallCenterPage() {
                           <span className="font-medium">{(it.quantity * Number(it.unit_price)).toFixed(2)}</span>
                         </li>
                       ))}
-                      <li className="flex items-center justify-between bg-muted/20 p-3 text-sm font-semibold">
-                        <span>Total</span><span>{(itemsTotal || current.total_amount).toFixed(2)}</span>
+                      <li className="flex items-center justify-between bg-primary/5 p-3">
+                        <span className="text-sm font-semibold">Total</span>
+                        <span className="text-xl font-bold text-primary">{(itemsTotal || current.total_amount).toFixed(2)}</span>
                       </li>
                     </ul>
                   )}
