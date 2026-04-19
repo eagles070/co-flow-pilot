@@ -494,11 +494,14 @@ export type Database = {
       purchases: {
         Row: {
           amount_paid: number
+          converted_to_product_id: string | null
           created_at: string
           created_by: string | null
           id: string
+          image_url: string | null
           notes: string | null
-          product_id: string
+          product_id: string | null
+          product_name: string | null
           purchase_date: string
           quantity: number
           status: Database["public"]["Enums"]["purchase_status"]
@@ -511,11 +514,14 @@ export type Database = {
         }
         Insert: {
           amount_paid?: number
+          converted_to_product_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          image_url?: string | null
           notes?: string | null
-          product_id: string
+          product_id?: string | null
+          product_name?: string | null
           purchase_date?: string
           quantity: number
           status?: Database["public"]["Enums"]["purchase_status"]
@@ -528,11 +534,14 @@ export type Database = {
         }
         Update: {
           amount_paid?: number
+          converted_to_product_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          image_url?: string | null
           notes?: string | null
-          product_id?: string
+          product_id?: string | null
+          product_name?: string | null
           purchase_date?: string
           quantity?: number
           status?: Database["public"]["Enums"]["purchase_status"]
@@ -544,6 +553,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "purchases_converted_to_product_id_fkey"
+            columns: ["converted_to_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchases_product_id_fkey"
             columns: ["product_id"]

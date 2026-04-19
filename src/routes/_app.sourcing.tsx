@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -13,6 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -30,9 +31,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Loader2, Search, Package, DollarSign, Wallet } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  Search,
+  Package,
+  DollarSign,
+  Wallet,
+  Upload,
+  ImageIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/sourcing")({
@@ -42,27 +53,10 @@ export const Route = createFileRoute("/_app/sourcing")({
 type PurchaseStatus = "ordered" | "in_transit" | "received";
 type TransportType = "air" | "sea" | "other";
 
-interface Supplier {
-  id: string;
-  name: string;
-  contact_name: string | null;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  notes: string | null;
-  is_active: boolean;
-}
-
-interface ProductLite {
-  id: string;
-  name: string;
-  sku: string | null;
-}
-
 interface Purchase {
   id: string;
-  product_id: string;
-  supplier_id: string | null;
+  product_name: string | null;
+  image_url: string | null;
   quantity: number;
   unit_cost: number;
   total_cost: number;
@@ -71,421 +65,612 @@ interface Purchase {
   status: PurchaseStatus;
   purchase_date: string;
   notes: string | null;
+  converted_to_product_id: string | null;
   created_at: string;
-  product?: ProductLite | null;
-  supplier?: { id: string; name: string } | null;
 }
 
-const statusLabel: Record<PurchaseStatus, string> = {
-  ordered: "Ordered",
-  in_transit: "In Transit",
-  received: "Received",
+const STATUS_BADGE: Record<PurchaseStatus, { label: string; className: string }> = {
+  ordered: { label: "Ordered", className: "bg-muted text-muted-foreground" },
+  in_transit: {
+    label: "In Transit",
+    className: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400",
+  },
+  received: {
+    label: "Received",
+    className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  },
 };
-const statusVariant: Record<PurchaseStatus, "secondary" | "outline" | "default"> = {
-  ordered: "outline",
-  in_transit: "secondary",
-  received: "default",
+
+const TRANSPORT_LABEL: Record<TransportType, string> = {
+  air: "Air",
+  sea: "Sea",
+  other: "Other",
+};
+
+interface FormState {
+  product_name: string;
+  image_url: string;
+  quantity: string;
+  unit_cost: string;
+  amount_paid: string;
+  transport_type: TransportType;
+  status: PurchaseStatus;
+  purchase_date: string;
+  notes: string;
+}
+
+const emptyForm: FormState = {
+  product_name: "",
+  image_url: "",
+  quantity: "1",
+  unit_cost: "0",
+  amount_paid: "0",
+  transport_type: "other",
+  status: "ordered",
+  purchase_date: new Date().toISOString().slice(0, 10),
+  notes: "",
 };
 
 function SourcingPage() {
-  const { hasAnyRole } = useAuth();
-  const canManage = hasAnyRole(["admin", "moderator"]);
-
-  return (
-    <div>
-      <PageHeader
-        title="Sourcing"
-        description="Track product purchases, supplier payments, and incoming stock."
-      />
-      <Tabs defaultValue="purchases" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="purchases">Purchases</TabsTrigger>
-          <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
-        </TabsList>
-        <TabsContent value="purchases">
-          <PurchasesTab canManage={canManage} />
-        </TabsContent>
-        <TabsContent value="suppliers">
-          <SuppliersTab canManage={canManage} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-// ─────────────── PURCHASES ───────────────
-
-function PurchasesTab({ canManage }: { canManage: boolean }) {
-  const [items, setItems] = useState<Purchase[]>([]);
-  const [products, setProducts] = useState<ProductLite[]>([]);
-  const [suppliers, setSuppliers] = useState<Pick<Supplier, "id" | "name">[]>([]);
+  const { user } = useAuth();
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Purchase | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  // filters
   const [search, setSearch] = useState("");
-  const [productFilter, setProductFilter] = useState<string>("all");
-  const [supplierFilter, setSupplierFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [transportFilter, setTransportFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
 
-  const emptyForm = {
-    product_id: "",
-    supplier_id: "",
-    quantity: 1,
-    unit_cost: 0,
-    amount_paid: 0,
-    transport_type: "other" as TransportType,
-    status: "ordered" as PurchaseStatus,
-    purchase_date: new Date().toISOString().slice(0, 10),
-    notes: "",
-  };
-  const [form, setForm] = useState(emptyForm);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Purchase | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const load = async () => {
-    setLoading(true);
-    const [pRes, prodRes, supRes] = await Promise.all([
-      supabase
-        .from("purchases")
-        .select("*, product:products(id,name,sku), supplier:suppliers(id,name)")
-        .order("purchase_date", { ascending: false }),
-      supabase.from("products").select("id,name,sku").order("name"),
-      supabase.from("suppliers").select("id,name").eq("is_active", true).order("name"),
-    ]);
-    if (pRes.error) toast.error(pRes.error.message);
-    else setItems((pRes.data ?? []) as Purchase[]);
-    setProducts((prodRes.data ?? []) as ProductLite[]);
-    setSuppliers((supRes.data ?? []) as Pick<Supplier, "id" | "name">[]);
-    setLoading(false);
-  };
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [convertTarget, setConvertTarget] = useState<Purchase | null>(null);
+  const [convertSku, setConvertSku] = useState("");
+  const [convertSellPrice, setConvertSellPrice] = useState("0");
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
-    load();
+    void loadPurchases();
   }, []);
 
-  const totals = useMemo(() => {
-    const cost = items.reduce((s, i) => s + Number(i.total_cost), 0);
-    const paid = items.reduce((s, i) => s + Number(i.amount_paid), 0);
-    return { cost, paid, remaining: cost - paid };
-  }, [items]);
+  async function loadPurchases() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("purchases")
+      .select("*")
+      .order("purchase_date", { ascending: false });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setPurchases((data ?? []) as Purchase[]);
+    }
+    setLoading(false);
+  }
 
   const filtered = useMemo(() => {
-    return items.filter((p) => {
-      if (productFilter !== "all" && p.product_id !== productFilter) return false;
-      if (supplierFilter !== "all" && p.supplier_id !== supplierFilter) return false;
+    return purchases.filter((p) => {
+      if (search && !(p.product_name ?? "").toLowerCase().includes(search.toLowerCase()))
+        return false;
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        const hay = `${p.product?.name ?? ""} ${p.product?.sku ?? ""} ${p.supplier?.name ?? ""} ${p.notes ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
+      if (transportFilter !== "all" && p.transport_type !== transportFilter) return false;
+      if (dateFilter && p.purchase_date !== dateFilter) return false;
       return true;
     });
-  }, [items, productFilter, supplierFilter, statusFilter, search]);
+  }, [purchases, search, statusFilter, transportFilter, dateFilter]);
 
-  const openNew = () => {
+  const totals = useMemo(() => {
+    const totalCost = filtered.reduce((s, p) => s + Number(p.total_cost ?? 0), 0);
+    const totalPaid = filtered.reduce((s, p) => s + Number(p.amount_paid ?? 0), 0);
+    return { totalCost, totalPaid, totalRemaining: totalCost - totalPaid };
+  }, [filtered]);
+
+  function openNew() {
     setEditing(null);
     setForm(emptyForm);
-    setOpen(true);
-  };
-  const openEdit = (p: Purchase) => {
+    setDialogOpen(true);
+  }
+
+  function openEdit(p: Purchase) {
     setEditing(p);
     setForm({
-      product_id: p.product_id,
-      supplier_id: p.supplier_id ?? "",
-      quantity: p.quantity,
-      unit_cost: Number(p.unit_cost),
-      amount_paid: Number(p.amount_paid),
+      product_name: p.product_name ?? "",
+      image_url: p.image_url ?? "",
+      quantity: String(p.quantity),
+      unit_cost: String(p.unit_cost),
+      amount_paid: String(p.amount_paid),
       transport_type: p.transport_type,
       status: p.status,
       purchase_date: p.purchase_date,
       notes: p.notes ?? "",
     });
-    setOpen(true);
-  };
+    setDialogOpen(true);
+  }
 
-  const save = async () => {
-    if (!form.product_id) return toast.error("Select a product");
-    if (form.quantity <= 0) return toast.error("Quantity must be > 0");
+  async function uploadImage(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    setUploadingImage(true);
+    const ext = file.name.split(".").pop();
+    const path = `sourcing/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (error) {
+      toast.error(error.message);
+      setUploadingImage(false);
+      return;
+    }
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    setForm((f) => ({ ...f, image_url: data.publicUrl }));
+    setUploadingImage(false);
+  }
+
+  async function handleSave() {
+    if (!form.product_name.trim()) {
+      toast.error("Product name is required");
+      return;
+    }
+    const qty = parseInt(form.quantity, 10);
+    if (!qty || qty <= 0) {
+      toast.error("Quantity must be greater than 0");
+      return;
+    }
     setSaving(true);
     const payload = {
-      product_id: form.product_id,
-      supplier_id: form.supplier_id || null,
-      quantity: form.quantity,
-      unit_cost: form.unit_cost,
-      amount_paid: form.amount_paid,
+      product_name: form.product_name.trim(),
+      image_url: form.image_url || null,
+      quantity: qty,
+      unit_cost: Number(form.unit_cost) || 0,
+      amount_paid: Number(form.amount_paid) || 0,
       transport_type: form.transport_type,
       status: form.status,
       purchase_date: form.purchase_date,
       notes: form.notes || null,
+      created_by: user?.id ?? null,
+      product_id: null,
     };
-    const { error } = editing
-      ? await supabase.from("purchases").update(payload).eq("id", editing.id)
-      : await supabase.from("purchases").insert(payload);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success(editing ? "Purchase updated" : "Purchase added");
-    setOpen(false);
-    load();
-  };
 
-  const del = async (id: string) => {
+    if (editing) {
+      const { error } = await supabase.from("purchases").update(payload).eq("id", editing.id);
+      if (error) {
+        toast.error(error.message);
+        setSaving(false);
+        return;
+      }
+      toast.success("Purchase updated");
+    } else {
+      const { data, error } = await supabase
+        .from("purchases")
+        .insert(payload)
+        .select()
+        .single();
+      if (error) {
+        toast.error(error.message);
+        setSaving(false);
+        return;
+      }
+      toast.success("Purchase added");
+      // If created directly as Received and not yet converted, prompt conversion
+      if (data && data.status === "received" && !data.converted_to_product_id) {
+        promptConvert(data as Purchase);
+      }
+    }
+    setSaving(false);
+    setDialogOpen(false);
+    void loadPurchases();
+  }
+
+  async function handleStatusChange(p: Purchase, newStatus: PurchaseStatus) {
+    const { error } = await supabase
+      .from("purchases")
+      .update({ status: newStatus })
+      .eq("id", p.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Status updated");
+    if (newStatus === "received" && !p.converted_to_product_id) {
+      promptConvert({ ...p, status: newStatus });
+    }
+    void loadPurchases();
+  }
+
+  function promptConvert(p: Purchase) {
+    setConvertTarget(p);
+    setConvertSku("");
+    setConvertSellPrice("0");
+    setConvertOpen(true);
+  }
+
+  async function handleConvert() {
+    if (!convertTarget) return;
+    setConverting(true);
+    const { data: product, error: prodErr } = await supabase
+      .from("products")
+      .insert({
+        name: convertTarget.product_name ?? "Untitled",
+        image_url: convertTarget.image_url,
+        sku: convertSku || null,
+        cost_price: Number(convertTarget.unit_cost) || 0,
+        sell_price: Number(convertSellPrice) || 0,
+        stock: convertTarget.quantity,
+      })
+      .select()
+      .single();
+    if (prodErr) {
+      toast.error(prodErr.message);
+      setConverting(false);
+      return;
+    }
+    // record stock_in movement
+    await supabase.from("stock_movements").insert({
+      product_id: product.id,
+      type: "purchase",
+      quantity: convertTarget.quantity,
+      unit_cost: convertTarget.unit_cost,
+      reference: `SRC-${convertTarget.id.slice(0, 8)}`,
+      note: "Converted from sourcing",
+      created_by: user?.id ?? null,
+    });
+    await supabase
+      .from("purchases")
+      .update({ converted_to_product_id: product.id, product_id: product.id, stock_applied: true })
+      .eq("id", convertTarget.id);
+
+    toast.success("Product created in Products & Stock");
+    setConverting(false);
+    setConvertOpen(false);
+    setConvertTarget(null);
+    void loadPurchases();
+  }
+
+  async function handleDelete(id: string) {
     if (!confirm("Delete this purchase?")) return;
     const { error } = await supabase.from("purchases").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Deleted");
-    load();
-  };
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Purchase deleted");
+    void loadPurchases();
+  }
 
-  const totalCost = form.quantity * form.unit_cost;
-  const remaining = totalCost - form.amount_paid;
+  const formTotal = (Number(form.quantity) || 0) * (Number(form.unit_cost) || 0);
+  const formRemaining = formTotal - (Number(form.amount_paid) || 0);
 
   return (
-    <div className="space-y-4">
-      {/* Summary cards */}
+    <div className="space-y-6">
+      <PageHeader
+        title="Sourcing"
+        description="Track product purchases, payments, and shipments before stock arrives"
+        actions={
+          <Button onClick={openNew}>
+            <Plus className="mr-1 h-4 w-4" /> Add Purchase
+          </Button>
+        }
+      />
+
       <div className="grid gap-4 sm:grid-cols-3">
         <SummaryCard
+          icon={<Package className="h-4 w-4" />}
+          label="Total Purchases Value"
+          value={totals.totalCost}
+        />
+        <SummaryCard
           icon={<DollarSign className="h-4 w-4" />}
-          label="Total purchases cost"
-          value={totals.cost}
+          label="Total Paid"
+          value={totals.totalPaid}
         />
         <SummaryCard
           icon={<Wallet className="h-4 w-4" />}
-          label="Total paid"
-          value={totals.paid}
-        />
-        <SummaryCard
-          icon={<Package className="h-4 w-4" />}
-          label="Total remaining"
-          value={totals.remaining}
-          highlight
+          label="Total Remaining"
+          value={totals.totalRemaining}
+          tone={totals.totalRemaining > 0 ? "warning" : "default"}
         />
       </div>
 
-      {/* Filters + action */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search product, supplier, notes…"
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Select value={productFilter} onValueChange={setProductFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Product" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All products</SelectItem>
-            {products.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Supplier" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All suppliers</SelectItem>
-            {suppliers.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="ordered">Ordered</SelectItem>
-            <SelectItem value="in_transit">In Transit</SelectItem>
-            <SelectItem value="received">Received</SelectItem>
-          </SelectContent>
-        </Select>
-        {canManage && (
-          <Button onClick={openNew}>
-            <Plus className="mr-2 h-4 w-4" /> Add purchase
-          </Button>
-        )}
-      </div>
-
-      {/* Table */}
-      <div className="rounded-lg border bg-card">
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="py-16 text-center text-sm text-muted-foreground">
-            No purchases found.
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Unit</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Paid</TableHead>
-                <TableHead className="text-right">Remaining</TableHead>
-                <TableHead>Transport</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                {canManage && <TableHead className="text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((p) => {
-                const rem = Number(p.total_cost) - Number(p.amount_paid);
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.product?.name ?? "—"}</TableCell>
-                    <TableCell>{p.supplier?.name ?? "—"}</TableCell>
-                    <TableCell className="text-right">{p.quantity}</TableCell>
-                    <TableCell className="text-right">{Number(p.unit_cost).toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {Number(p.total_cost).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">{Number(p.amount_paid).toFixed(2)}</TableCell>
-                    <TableCell
-                      className={`text-right ${rem > 0 ? "text-destructive" : "text-muted-foreground"}`}
-                    >
-                      {rem.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="capitalize">{p.transport_type}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant[p.status]}>{statusLabel[p.status]}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{p.purchase_date}</TableCell>
-                    {canManage && (
-                      <TableCell className="text-right">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(p)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => del(p.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-
-      {/* Per-product summary */}
-      {productFilter !== "all" && <ProductPurchaseSummary purchases={filtered} />}
-
-      {/* Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit purchase" : "New purchase"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Product *</Label>
-                <Select
-                  value={form.product_id}
-                  onValueChange={(v) => setForm({ ...form, product_id: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Supplier</Label>
-                <Select
-                  value={form.supplier_id || "none"}
-                  onValueChange={(v) => setForm({ ...form, supplier_id: v === "none" ? "" : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select supplier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— None —</SelectItem>
-                    {suppliers.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by product name…"
+                className="pl-8"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                <SelectItem value="ordered">Ordered</SelectItem>
+                <SelectItem value="in_transit">In Transit</SelectItem>
+                <SelectItem value="received">Received</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={transportFilter} onValueChange={setTransportFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Transport" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All transport</SelectItem>
+                <SelectItem value="air">Air</SelectItem>
+                <SelectItem value="sea">Sea</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="date"
+              className="w-[160px]"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+            />
+            {(statusFilter !== "all" || transportFilter !== "all" || dateFilter || search) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("all");
+                  setTransportFilter("all");
+                  setDateFilter("");
+                }}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              No purchases yet. Click "Add Purchase" to track your first order.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Image</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Unit Cost</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Paid</TableHead>
+                    <TableHead className="text-right">Remaining</TableHead>
+                    <TableHead>Transport</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((p) => {
+                    const remaining = Number(p.total_cost) - Number(p.amount_paid);
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell>
+                          {p.image_url ? (
+                            <img
+                              src={p.image_url}
+                              alt={p.product_name ?? ""}
+                              className="h-10 w-10 rounded object-cover border"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
+                              <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {p.product_name ?? "—"}
+                          {p.converted_to_product_id && (
+                            <Badge variant="secondary" className="ml-2 text-[10px]">
+                              In stock
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">{p.quantity}</TableCell>
+                        <TableCell className="text-right">
+                          {Number(p.unit_cost).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {Number(p.total_cost).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {Number(p.amount_paid).toFixed(2)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right ${remaining > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}
+                        >
+                          {remaining.toFixed(2)}
+                        </TableCell>
+                        <TableCell>{TRANSPORT_LABEL[p.transport_type]}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={p.status}
+                            onValueChange={(v) =>
+                              handleStatusChange(p, v as PurchaseStatus)
+                            }
+                          >
+                            <SelectTrigger className="h-7 w-[130px]">
+                              <Badge
+                                variant="secondary"
+                                className={STATUS_BADGE[p.status].className}
+                              >
+                                {STATUS_BADGE[p.status].label}
+                              </Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ordered">Ordered</SelectItem>
+                              <SelectItem value="in_transit">In Transit</SelectItem>
+                              <SelectItem value="received">Received</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>{p.purchase_date}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => openEdit(p)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDelete(p.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add / Edit dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Purchase" : "Add Purchase"}</DialogTitle>
+            <DialogDescription>
+              Track a purchase before the products arrive in stock.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Product Name *</Label>
+                <Input
+                  value={form.product_name}
+                  onChange={(e) => setForm((f) => ({ ...f, product_name: e.target.value }))}
+                  placeholder="e.g. Wireless Earbuds Pro"
+                />
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Product Image</Label>
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) void uploadImage(file);
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed rounded-md p-4 cursor-pointer hover:border-primary/50 transition-colors flex items-center gap-3"
+                >
+                  {form.image_url ? (
+                    <img
+                      src={form.image_url}
+                      alt=""
+                      className="h-16 w-16 rounded object-cover border"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded bg-muted flex items-center justify-center">
+                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 text-sm text-muted-foreground">
+                    {uploadingImage ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Uploading…
+                      </span>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1 text-foreground">
+                          <Upload className="h-4 w-4" /> Drop image here or click to upload
+                        </div>
+                        <div className="text-xs">PNG, JPG, WEBP up to ~5MB</div>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void uploadImage(file);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Quantity *</Label>
                 <Input
                   type="number"
-                  min={1}
+                  min="1"
                   value={form.quantity}
-                  onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
+                  onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
                 />
               </div>
-              <div>
-                <Label>Cost / unit</Label>
+              <div className="space-y-2">
+                <Label>Cost per Unit</Label>
                 <Input
                   type="number"
                   step="0.01"
-                  min={0}
+                  min="0"
                   value={form.unit_cost}
-                  onChange={(e) => setForm({ ...form, unit_cost: Number(e.target.value) })}
+                  onChange={(e) => setForm((f) => ({ ...f, unit_cost: e.target.value }))}
                 />
               </div>
-              <div>
-                <Label>Total cost</Label>
-                <Input value={totalCost.toFixed(2)} readOnly className="bg-muted" />
+              <div className="space-y-2">
+                <Label>Total Cost (auto)</Label>
+                <Input value={formTotal.toFixed(2)} disabled />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Amount paid</Label>
+              <div className="space-y-2">
+                <Label>Amount Paid</Label>
                 <Input
                   type="number"
                   step="0.01"
-                  min={0}
+                  min="0"
                   value={form.amount_paid}
-                  onChange={(e) => setForm({ ...form, amount_paid: Number(e.target.value) })}
+                  onChange={(e) => setForm((f) => ({ ...f, amount_paid: e.target.value }))}
                 />
               </div>
-              <div>
-                <Label>Remaining</Label>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Remaining Balance (auto)</Label>
                 <Input
-                  value={remaining.toFixed(2)}
-                  readOnly
-                  className={`bg-muted ${remaining > 0 ? "text-destructive" : ""}`}
+                  value={formRemaining.toFixed(2)}
+                  disabled
+                  className={
+                    formRemaining > 0 ? "text-amber-600 dark:text-amber-400" : ""
+                  }
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label>Transport</Label>
+
+              <div className="space-y-2">
+                <Label>Transport Type</Label>
                 <Select
                   value={form.transport_type}
-                  onValueChange={(v: TransportType) => setForm({ ...form, transport_type: v })}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, transport_type: v as TransportType }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -497,11 +682,11 @@ function PurchasesTab({ canManage }: { canManage: boolean }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>Status</Label>
                 <Select
                   value={form.status}
-                  onValueChange={(v: PurchaseStatus) => setForm({ ...form, status: v })}
+                  onValueChange={(v) => setForm((f) => ({ ...f, status: v as PurchaseStatus }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -509,34 +694,82 @@ function PurchasesTab({ canManage }: { canManage: boolean }) {
                   <SelectContent>
                     <SelectItem value="ordered">Ordered</SelectItem>
                     <SelectItem value="in_transit">In Transit</SelectItem>
-                    <SelectItem value="received">Received (auto-stock)</SelectItem>
+                    <SelectItem value="received">Received</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-2 sm:col-span-2">
                 <Label>Date</Label>
                 <Input
                   type="date"
                   value={form.purchase_date}
-                  onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
+                  onChange={(e) => setForm((f) => ({ ...f, purchase_date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={form.notes}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  rows={3}
                 />
               </div>
             </div>
-            <div>
-              <Label>Notes</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving || uploadingImage}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editing ? "Save Changes" : "Add Purchase"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert to product dialog */}
+      <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert to Product?</DialogTitle>
+            <DialogDescription>
+              Add "{convertTarget?.product_name}" to Products & Stock with{" "}
+              {convertTarget?.quantity} units as initial stock.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>SKU (optional)</Label>
+              <Input
+                value={convertSku}
+                onChange={(e) => setConvertSku(e.target.value)}
+                placeholder="e.g. EARB-PRO-001"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Sell Price</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={convertSellPrice}
+                onChange={(e) => setConvertSellPrice(e.target.value)}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+            <Button
+              variant="outline"
+              onClick={() => setConvertOpen(false)}
+              disabled={converting}
+            >
+              No, keep in sourcing
             </Button>
-            <Button onClick={save} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save
+            <Button onClick={handleConvert} disabled={converting}>
+              {converting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Yes, create product
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -549,247 +782,27 @@ function SummaryCard({
   icon,
   label,
   value,
-  highlight,
+  tone = "default",
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
-  highlight?: boolean;
+  tone?: "default" | "warning";
 }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-        <span className="text-muted-foreground">{icon}</span>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          {icon} {label}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={`text-2xl font-bold ${highlight && value > 0 ? "text-destructive" : ""}`}>
+        <div
+          className={`text-2xl font-semibold ${tone === "warning" && value > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}
+        >
           {value.toFixed(2)}
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function ProductPurchaseSummary({ purchases }: { purchases: Purchase[] }) {
-  const qty = purchases.reduce((s, p) => s + p.quantity, 0);
-  const spent = purchases.reduce((s, p) => s + Number(p.total_cost), 0);
-  const avg = qty > 0 ? spent / qty : 0;
-  return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <SummaryCard icon={<Package className="h-4 w-4" />} label="Total quantity" value={qty} />
-      <SummaryCard icon={<DollarSign className="h-4 w-4" />} label="Total spent" value={spent} />
-      <SummaryCard icon={<Wallet className="h-4 w-4" />} label="Avg cost / unit" value={avg} />
-    </div>
-  );
-}
-
-// ─────────────── SUPPLIERS ───────────────
-
-function SuppliersTab({ canManage }: { canManage: boolean }) {
-  const [items, setItems] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Supplier | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const empty: Omit<Supplier, "id"> = {
-    name: "",
-    contact_name: "",
-    phone: "",
-    email: "",
-    address: "",
-    notes: "",
-    is_active: true,
-  };
-  const [form, setForm] = useState(empty);
-
-  const load = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("suppliers")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    else setItems(data ?? []);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const openNew = () => {
-    setEditing(null);
-    setForm(empty);
-    setOpen(true);
-  };
-  const openEdit = (s: Supplier) => {
-    setEditing(s);
-    setForm({
-      name: s.name,
-      contact_name: s.contact_name ?? "",
-      phone: s.phone ?? "",
-      email: s.email ?? "",
-      address: s.address ?? "",
-      notes: s.notes ?? "",
-      is_active: s.is_active,
-    });
-    setOpen(true);
-  };
-
-  const save = async () => {
-    if (!form.name) return toast.error("Name required");
-    setSaving(true);
-    const payload = {
-      ...form,
-      contact_name: form.contact_name || null,
-      phone: form.phone || null,
-      email: form.email || null,
-      address: form.address || null,
-      notes: form.notes || null,
-    };
-    const { error } = editing
-      ? await supabase.from("suppliers").update(payload).eq("id", editing.id)
-      : await supabase.from("suppliers").insert(payload);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Saved");
-    setOpen(false);
-    load();
-  };
-
-  const del = async (id: string) => {
-    if (!confirm("Delete this supplier?")) return;
-    const { error } = await supabase.from("suppliers").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Deleted");
-    load();
-  };
-
-  return (
-    <div className="space-y-4">
-      {canManage && (
-        <div className="flex justify-end">
-          <Button onClick={openNew}>
-            <Plus className="mr-2 h-4 w-4" /> New supplier
-          </Button>
-        </div>
-      )}
-      <div className="rounded-lg border bg-card">
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : items.length === 0 ? (
-          <div className="py-16 text-center text-sm text-muted-foreground">
-            No suppliers yet.
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                {canManage && <TableHead className="text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.name}</TableCell>
-                  <TableCell>{s.contact_name ?? "—"}</TableCell>
-                  <TableCell>{s.phone ?? "—"}</TableCell>
-                  <TableCell>{s.email ?? "—"}</TableCell>
-                  <TableCell>
-                    {s.is_active ? (
-                      <Badge variant="secondary">Active</Badge>
-                    ) : (
-                      <Badge variant="outline">Inactive</Badge>
-                    )}
-                  </TableCell>
-                  {canManage && (
-                    <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(s)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => del(s.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit supplier" : "New supplier"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-3">
-            <div>
-              <Label>Name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Contact name</Label>
-                <Input
-                  value={form.contact_name ?? ""}
-                  onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input
-                  value={form.phone ?? ""}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input
-                value={form.email ?? ""}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Address</Label>
-              <Input
-                value={form.address ?? ""}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Notes</Label>
-              <Textarea
-                value={form.notes ?? ""}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={save} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
   );
 }
