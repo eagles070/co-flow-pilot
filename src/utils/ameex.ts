@@ -1,0 +1,115 @@
+type AmeexItem = {
+  product_name: string;
+  quantity: number;
+};
+
+type AmeexOrder = {
+  reference: string;
+  customer_name: string;
+  customer_phone: string;
+  city: string | null;
+  shipping_address: string | null;
+  notes: string | null;
+  total_amount: number | string;
+};
+
+type AmeexProvider = {
+  api_id?: string | null;
+  business_id?: string | null;
+};
+
+export function getAmeexBusinessId(provider: AmeexProvider): string | null {
+  const businessId = provider.business_id?.trim();
+  if (businessId) return businessId;
+
+  const apiId = provider.api_id?.trim();
+  return apiId || null;
+}
+
+export function buildAmeexParcelForm({
+  order,
+  items,
+  provider,
+}: {
+  order: AmeexOrder;
+  items: AmeexItem[];
+  provider: AmeexProvider;
+}) {
+  const form = new FormData();
+  const productLabel = items.map((item) => `${item.product_name} x${item.quantity}`).join(", ") || "Order";
+  const businessId = getAmeexBusinessId(provider);
+
+  form.append("type", "SIMPLE");
+  form.append("order_num", order.reference);
+  form.append("replace", "true");
+  form.append("open", "YES");
+  form.append("try", "NO");
+  form.append("fragile", "0");
+  form.append("receiver", order.customer_name);
+  form.append("phone", order.customer_phone);
+  form.append("city", order.city || "1");
+  form.append("address", order.shipping_address || "N/A");
+  form.append("comment", order.notes || "");
+  form.append("product", productLabel);
+  form.append("cod", String(order.total_amount));
+
+  if (businessId) {
+    form.append("business", businessId);
+  }
+
+  return form;
+}
+
+export function parseAmeexResponse(text: string): any {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
+
+export function isAmeexSuccessResponse(payload: any) {
+  const apiType = payload?.api?.type;
+  return apiType ? apiType === "success" : true;
+}
+
+export function getAmeexErrorMessage(payload: any): string | null {
+  return payload?.api?.msg || payload?.message || payload?.error || null;
+}
+
+export function findAmeexTracking(payload: any): string | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const keys = [
+    "code",
+    "CODE",
+    "parcel_code",
+    "PARCEL_CODE",
+    "parcel",
+    "PARCEL",
+    "tracking",
+    "tracking_number",
+    "TRACKING",
+    "barcode",
+    "BARCODE",
+    "num",
+    "NUM",
+    "order_code",
+    "ORDER_CODE",
+  ];
+
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number") return String(value);
+  }
+
+  for (const nestedValue of Object.values(payload)) {
+    if (nestedValue && typeof nestedValue === "object") {
+      const found = findAmeexTracking(nestedValue);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}

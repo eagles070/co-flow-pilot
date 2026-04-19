@@ -1,5 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  buildAmeexParcelForm,
+  findAmeexTracking,
+  getAmeexErrorMessage,
+  isAmeexSuccessResponse,
+  parseAmeexResponse,
+} from "@/utils/ameex";
 
 /**
  * Confirm an order:
@@ -121,23 +128,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     }
 
     // 4) Push to Ameex
-    const productLabel =
-      items.map((i) => `${i.product_name} x${i.quantity}`).join(", ") || "Order";
-
-    const form = new FormData();
-    form.append("type", "SIMPLE");
-    form.append("order_num", order.reference);
-    form.append("replace", "true");
-    form.append("open", "YES");
-    form.append("try", "NO");
-    form.append("fragile", "0");
-    form.append("receiver", order.customer_name);
-    form.append("phone", order.customer_phone);
-    form.append("city", order.city || "1");
-    form.append("address", order.shipping_address || "N/A");
-    form.append("comment", order.notes || "");
-    form.append("product", productLabel);
-    form.append("cod", String(order.total_amount));
+    const form = buildAmeexParcelForm({ order, items, provider });
 
     const url = `${provider.base_url}/customer/Delivery/Parcels/Action/Type/Add`;
 
@@ -151,7 +142,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
         body: form,
       });
       text = await res.text();
-      try { parsed = JSON.parse(text); } catch { parsed = { raw: text }; }
+      parsed = parseAmeexResponse(text);
     } catch (err: any) {
       await db.from("integration_logs").insert({
         provider_type: "delivery",
@@ -168,31 +159,9 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       };
     }
 
-    // Ameex returns the tracking code under various field names depending on
-    // account/version. Cover all known shapes + a deep search fallback.
-    const findTracking = (obj: any): string | null => {
-      if (!obj || typeof obj !== "object") return null;
-      const keys = [
-        "code", "CODE", "parcel_code", "PARCEL_CODE",
-        "parcel", "PARCEL", "tracking", "tracking_number",
-        "TRACKING", "barcode", "BARCODE", "num", "NUM",
-        "order_code", "ORDER_CODE",
-      ];
-      for (const k of keys) {
-        const v = obj[k];
-        if (typeof v === "string" && v.trim()) return v.trim();
-        if (typeof v === "number") return String(v);
-      }
-      for (const k of Object.keys(obj)) {
-        const v = obj[k];
-        if (v && typeof v === "object") {
-          const found = findTracking(v);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    const trackingNumber = findTracking(parsed);
+    const trackingNumber = findAmeexTracking(parsed);
+    const ameexError = getAmeexErrorMessage(parsed);
+    const ameexSuccess = isAmeexSuccessResponse(parsed);
 
     await db.from("integration_logs").insert({
       provider_type: "delivery",
@@ -200,9 +169,9 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       direction: "outgoing",
       endpoint: url,
       http_status: res.status,
-      status: res.ok && trackingNumber ? "success" : "error",
+      status: res.ok && ameexSuccess && trackingNumber ? "success" : "error",
       payload: { request: { order_id: order.id }, response: parsed },
-      error: res.ok ? (trackingNumber ? null : "No tracking number returned") : `HTTP ${res.status}`,
+      error: res.ok ? (ameexSuccess && trackingNumber ? null : ameexError || "No tracking number returned") : `HTTP ${res.status}`,
     });
 
     if (!res.ok) {
@@ -212,6 +181,18 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
         ameex: {
           ok: false,
           error: `Ameex HTTP ${res.status}: ${parsed?.message || parsed?.error || text.slice(0, 200)}`,
+        },
+      };
+    }
+
+    if (!ameexSuccess) {
+      return {
+        ok: false,
+        stock: { applied: stockApplied, errors: stockErrors },
+        ameex: {
+          ok: false,
+          error: ameexError || `Ameex request failed. Response: ${JSON.stringify(parsed).slice(0, 250)}`,
+          response: parsed,
         },
       };
     }
