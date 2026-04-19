@@ -50,6 +50,7 @@ interface CityRow {
 export function CitiesTab({ isAdmin }: Props) {
   const [rows, setRows] = useState<CityRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CityRow | null>(null);
   const [form, setForm] = useState({ name: "", delivery_cost: 0, return_cost: 0 });
@@ -79,7 +80,7 @@ export function CitiesTab({ isAdmin }: Props) {
   };
 
   const submit = async () => {
-    if (!form.name.trim()) return toast.error("Name is required");
+    if (!form.name.trim()) return toast.error("City name is required");
     const payload = {
       name: form.name.trim(),
       delivery_cost: Number(form.delivery_cost) || 0,
@@ -108,14 +109,25 @@ export function CitiesTab({ isAdmin }: Props) {
 
   const onImport = async (file: File) => {
     const text = await file.text();
-    // Simple CSV/Excel-like parsing: first line headers (name,delivery_cost,return_cost)
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) return toast.error("File is empty");
     const headers = lines[0].split(/[,;\t]/).map((h) => h.trim().toLowerCase());
-    const nameIdx = headers.indexOf("name");
-    const dIdx = headers.indexOf("delivery_cost");
-    const rIdx = headers.indexOf("return_cost");
-    if (nameIdx < 0) return toast.error("Header 'name' missing");
+
+    // Accept both new format (city_name, delivery_price, refused_price)
+    // and legacy (name, delivery_cost, return_cost)
+    const nameIdx = ["city_name", "name", "city"]
+      .map((h) => headers.indexOf(h))
+      .find((i) => i >= 0) ?? -1;
+    const dIdx = ["delivery_price", "delivery_cost"]
+      .map((h) => headers.indexOf(h))
+      .find((i) => i >= 0) ?? -1;
+    const rIdx = ["refused_price", "return_cost", "return_price"]
+      .map((h) => headers.indexOf(h))
+      .find((i) => i >= 0) ?? -1;
+
+    if (nameIdx < 0)
+      return toast.error("Header missing. Expected: city_name,delivery_price,refused_price");
+
     const inserts: { name: string; delivery_cost: number; return_cost: number }[] = [];
     for (const line of lines.slice(1)) {
       const cols = line.split(/[,;\t]/).map((c) => c.trim());
@@ -131,16 +143,25 @@ export function CitiesTab({ isAdmin }: Props) {
     const { error } = await supabase.from("cities").upsert(inserts, { onConflict: "name" });
     if (error) return toast.error(error.message);
     toast.success(`Imported ${inserts.length} cities`);
+    if (fileRef.current) fileRef.current.value = "";
     load();
   };
 
+  const filtered = rows.filter((r) =>
+    search ? r.name.toLowerCase().includes(search.toLowerCase()) : true,
+  );
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-start justify-between gap-3">
         <div>
           <CardTitle className="text-base">Cities</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
-            Internal delivery / return cost estimates (not linked to provider APIs).
+            Used for city selection in orders and for internal finance calculations only.
+            Not sent to delivery providers.
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            CSV format: <code className="rounded bg-muted px-1">city_name,delivery_price,refused_price</code>
           </p>
         </div>
         {isAdmin && (
@@ -167,25 +188,41 @@ export function CitiesTab({ isAdmin }: Props) {
                 </DialogHeader>
                 <div className="grid gap-3">
                   <div>
-                    <Label>Name</Label>
-                    <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                    <Label>City name</Label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="e.g. Casablanca"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label>Delivery cost</Label>
+                      <Label>Delivery price</Label>
                       <Input
                         type="number"
+                        step="0.01"
                         value={form.delivery_cost}
-                        onChange={(e) => setForm({ ...form, delivery_cost: Number(e.target.value) })}
+                        onChange={(e) =>
+                          setForm({ ...form, delivery_cost: Number(e.target.value) })
+                        }
                       />
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Used in finance when order = delivered.
+                      </p>
                     </div>
                     <div>
-                      <Label>Return cost</Label>
+                      <Label>Refused price</Label>
                       <Input
                         type="number"
+                        step="0.01"
                         value={form.return_cost}
-                        onChange={(e) => setForm({ ...form, return_cost: Number(e.target.value) })}
+                        onChange={(e) =>
+                          setForm({ ...form, return_cost: Number(e.target.value) })
+                        }
                       />
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Used in finance when order = refused / returned.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -201,31 +238,45 @@ export function CitiesTab({ isAdmin }: Props) {
         )}
       </CardHeader>
       <CardContent>
+        <div className="mb-3">
+          <Input
+            placeholder="Search cities..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
+        </div>
         {loading ? (
           <div className="flex items-center justify-center py-10">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        ) : rows.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No cities yet.</p>
+        ) : filtered.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            {rows.length === 0 ? "No cities yet." : "No cities match your search."}
+          </p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="text-right">Delivery cost</TableHead>
-                <TableHead className="text-right">Return cost</TableHead>
+                <TableHead>City name</TableHead>
+                <TableHead className="text-right">Delivery price</TableHead>
+                <TableHead className="text-right">Refused price</TableHead>
                 <TableHead>Active</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((r) => (
+              {filtered.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.name}</TableCell>
                   <TableCell className="text-right">{Number(r.delivery_cost).toFixed(2)}</TableCell>
                   <TableCell className="text-right">{Number(r.return_cost).toFixed(2)}</TableCell>
                   <TableCell>
-                    <Switch checked={r.is_active} disabled={!isAdmin} onCheckedChange={(v) => toggleActive(r, v)} />
+                    <Switch
+                      checked={r.is_active}
+                      disabled={!isAdmin}
+                      onCheckedChange={(v) => toggleActive(r, v)}
+                    />
                   </TableCell>
                   <TableCell className="text-right">
                     {isAdmin && (
@@ -242,11 +293,15 @@ export function CitiesTab({ isAdmin }: Props) {
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete city?</AlertDialogTitle>
-                              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                              <AlertDialogDescription>
+                                This action cannot be undone.
+                              </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => remove(r)}>Delete</AlertDialogAction>
+                              <AlertDialogAction onClick={() => remove(r)}>
+                                Delete
+                              </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
