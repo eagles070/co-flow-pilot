@@ -394,7 +394,7 @@ function CallCenterPage() {
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Call note</Label>
-                    <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note about this call…" />
+                    <Textarea ref={noteRef} rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note about this call…" />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Recall at (optional)</Label>
