@@ -126,6 +126,8 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
 
     const form = new FormData();
     form.append("type", "SIMPLE");
+    // Sender is resolved by Ameex from the API credentials (C-Api-Id / C-Api-Key).
+    // Only include an explicit sender field if the user configured one.
     if (provider.business_id) {
       form.append("business", provider.business_id);
       form.append("sender", provider.business_id);
