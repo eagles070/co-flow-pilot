@@ -561,6 +561,8 @@ function DeliveryTab({
     setEditApiKey(p.api_key ?? "");
     setEditBusinessId(p.business_id ?? "");
     setEditBaseApi(p.base_url ?? "https://api.ameex.app");
+    setSenders([]);
+    setSenderAttempts([]);
     setEditOpen(true);
   };
 
