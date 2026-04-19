@@ -346,7 +346,7 @@ export const updateDeliveryProvider = createServerFn({ method: "POST" })
 
     const { data: row, error } = await context.supabase
       .from("delivery_providers")
-      .update(patch)
+      .update(patch as any)
       .eq("id", data.id)
       .select()
       .single();
