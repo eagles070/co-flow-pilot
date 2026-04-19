@@ -29,7 +29,8 @@ function normalizeAmount(value: number | string) {
 
 function getAmeexItemLabel(item: AmeexItem) {
   const sku = item.sku?.trim();
-  return sku || item.product_name;
+  const name = item.product_name?.trim() || "Product";
+  return sku ? `[${sku}] ${name}` : name;
 }
 
 export function getAmeexBusinessId(provider: AmeexProvider): string | null {
