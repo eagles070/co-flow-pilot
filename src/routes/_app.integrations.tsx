@@ -544,7 +544,16 @@ function DeliveryTab({
 
   const testMut = useMutation({
     mutationFn: (id: string) => test({ data: { id } }),
-    onSuccess: (r: any) => toast.success(`Provider responded: HTTP ${r.http_status}`),
+    onSuccess: (r: any) => {
+      const status = r?.http_status;
+      if (status >= 200 && status < 300) {
+        toast.success(`Connection OK (HTTP ${status}) — credentials are valid.`);
+      } else if (status === 401 || status === 403) {
+        toast.error(`Auth failed (HTTP ${status}) — check API ID & API Key.`);
+      } else {
+        toast.error(`Provider responded HTTP ${status}. Check credentials and base URL.`);
+      }
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
