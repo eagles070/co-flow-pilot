@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, FileSpreadsheet, Truck, Copy, RefreshCw, Trash2, Send, Plus } from "lucide-react";
+import { ShoppingBag, FileSpreadsheet, Truck, Copy, RefreshCw, Trash2, Send, Plus, Pencil } from "lucide-react";
 import {
   listIntegrations,
   createShopifyStore,
@@ -43,6 +43,7 @@ import {
   deleteSheetsIntegration,
   syncSheetNow,
   createDeliveryProvider,
+  updateDeliveryProvider,
   deleteDeliveryProvider,
   testDeliveryProvider,
 } from "@/utils/integrations.functions";
