@@ -321,7 +321,14 @@ function CallCenterPage() {
         }
       />
 
-      {mode === "idle" ? (
+      <Tabs defaultValue="queue" className="mt-2">
+        <TabsList>
+          <TabsTrigger value="queue"><PhoneCall className="mr-1.5 h-4 w-4" />Queue</TabsTrigger>
+          <TabsTrigger value="history"><History className="mr-1.5 h-4 w-4" />Historique</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="queue" className="mt-4">
+          {mode === "idle" ? (
         <Card className="mx-auto max-w-2xl">
           <CardContent className="flex flex-col items-center justify-center gap-5 py-16 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
