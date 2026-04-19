@@ -435,7 +435,7 @@ function CallCenterPage() {
                   <Keyboard className="h-3 w-3" />Shortcuts: Enter Confirm · N No reply · P Postpone · C Cancel · S Skip
                 </div>
               </CardContent>
-            </div>
+            </>
           )}
         </Card>
 
