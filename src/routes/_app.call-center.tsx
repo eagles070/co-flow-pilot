@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   PhoneCall, CheckCircle2, XCircle, PhoneOff, Clock, RotateCcw,
@@ -17,6 +19,8 @@ import {
   Keyboard, Repeat, Timer, Loader2, Play, Pencil, Headphones,
 } from "lucide-react";
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
+import { HistoriqueTab } from "@/components/call-center/HistoriqueTab";
+import type { StatusOpt } from "@/components/call-center/ChangeStatusDialog";
 
 // Lightweight WebAudio beep — no asset dependency
 function playBeep(kind: "success" | "error") {
@@ -84,6 +88,8 @@ function CallCenterPage() {
   const [loading, setLoading] = useState(false);
   const [stores, setStores] = useState<StoreOpt[]>([]);
   const [editOpen, setEditOpen] = useState<string | null>(null);
+  const [statuses, setStatuses] = useState<StatusOpt[]>([]);
+  const [dropdownStatus, setDropdownStatus] = useState<string>("");
 
   const [note, setNote] = useState("");
   const [recallAt, setRecallAt] = useState("");
@@ -97,12 +103,14 @@ function CallCenterPage() {
   const timerRef = useRef<number | null>(null);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Initial setup: max attempts + stores list (for edit dialog)
+  // Initial setup: max attempts + stores list (for edit dialog) + dynamic statuses
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "nrp_max_attempts").maybeSingle()
       .then(({ data }) => { if (data?.value) setMaxAttempts(Number(data.value) || 3); });
     supabase.from("stores").select("id, name").eq("is_active", true).order("name")
       .then(({ data }) => setStores((data ?? []) as StoreOpt[]));
+    supabase.from("status_configs").select("key, label, color").eq("is_active", true).order("sort_order")
+      .then(({ data }) => setStatuses((data ?? []) as StatusOpt[]));
   }, []);
 
   // Count pending orders for the start screen badge
@@ -142,6 +150,7 @@ function CallCenterPage() {
     setNote("");
     setRecallAt("");
     setHistory([]);
+    setDropdownStatus("");
     refreshPendingCount();
   }, [refreshPendingCount]);
 
@@ -166,7 +175,7 @@ function CallCenterPage() {
     const o = list[0];
     setCurrent(o);
     setMode("active");
-    setNote(""); setRecallAt(""); setHistory([]);
+    setNote(""); setRecallAt(""); setHistory([]); setDropdownStatus("");
     // Side checks
     const [bl, rp] = await Promise.all([
       supabase.from("blacklist").select("phone").eq("phone", o.customer_phone).maybeSingle(),
@@ -218,6 +227,18 @@ function CallCenterPage() {
     toast.info("Order skipped");
     resetToIdle();
   }, [current, resetToIdle]);
+
+  // Apply a custom status from the dynamic dropdown (Settings → Statuses)
+  const submitDropdownStatus = useCallback(async () => {
+    if (!current || !user || saving || !dropdownStatus) return;
+    // Map well-known keys to call_attempts.outcome
+    const outcomeMap: Record<string, Outcome> = {
+      confirmed: "confirmed", cancelled: "cancelled", no_reply: "no_reply",
+      postponed: "postponed", duplicate: "cancelled",
+    };
+    const outcome: Outcome = outcomeMap[dropdownStatus] ?? "callback_requested";
+    await finishAndReset(dropdownStatus as OrderStatus, outcome);
+  }, [current, user, saving, dropdownStatus, finishAndReset]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -300,7 +321,14 @@ function CallCenterPage() {
         }
       />
 
-      {mode === "idle" ? (
+      <Tabs defaultValue="queue" className="mt-2">
+        <TabsList>
+          <TabsTrigger value="queue"><PhoneCall className="mr-1.5 h-4 w-4" />Queue</TabsTrigger>
+          <TabsTrigger value="history"><History className="mr-1.5 h-4 w-4" />Historique</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="queue" className="mt-4">
+          {mode === "idle" ? (
         <Card className="mx-auto max-w-2xl">
           <CardContent className="flex flex-col items-center justify-center gap-5 py-16 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
@@ -488,24 +516,47 @@ function CallCenterPage() {
               </Button>
             </div>
             {/* Secondary actions */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
               <Button onClick={() => finishAndReset("cancelled", "cancelled")} disabled={saving} variant="destructive">
                 <XCircle className="mr-2 h-4 w-4" />Cancel <kbd className="ml-2 rounded bg-destructive-foreground/20 px-1.5 py-0.5 text-[10px]">C</kbd>
               </Button>
               <Button onClick={() => finishAndReset("cancelled", "wrong_number")} disabled={saving} variant="outline">
-                Wrong #
+                Wrong number
               </Button>
-              <Button onClick={skipOrder} disabled={saving} variant="ghost">
-                Skip <kbd className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px]">S</kbd>
-              </Button>
+              <div className="flex gap-1">
+                <Select value={dropdownStatus} onValueChange={setDropdownStatus} disabled={saving}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select status…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuses.map((s) => (
+                      <SelectItem key={s.key} value={s.key}>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
+                          {s.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={submitDropdownStatus} disabled={saving || !dropdownStatus} variant="default">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
-              <Keyboard className="h-3 w-3" />Shortcuts: Enter Confirm · N No reply · P Postpone · C Cancel · S Skip
+              <Keyboard className="h-3 w-3" />Shortcuts: Enter Confirm · N No reply · P Postpone · C Cancel
             </div>
           </CardContent>
         </Card>
-      ) : null}
+          ) : null}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-4">
+          <HistoriqueTab statuses={statuses} stores={stores} />
+        </TabsContent>
+      </Tabs>
 
       <EditOrderDialog
         orderId={editOpen}
