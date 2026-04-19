@@ -515,7 +515,6 @@ function DeliveryTab({
   const [providerType, setProviderType] = useState("ameex");
   const [apiId, setApiId] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [businessId, setBusinessId] = useState("");
   const [baseApi, setBaseApi] = useState("https://api.ameex.app");
 
   const [editOpen, setEditOpen] = useState(false);
@@ -524,34 +523,12 @@ function DeliveryTab({
   const [editProviderType, setEditProviderType] = useState("ameex");
   const [editApiId, setEditApiId] = useState("");
   const [editApiKey, setEditApiKey] = useState("");
-  const [editBusinessId, setEditBusinessId] = useState("");
   const [editBaseApi, setEditBaseApi] = useState("https://api.ameex.app");
 
   const create = useServerFn(createDeliveryProvider);
   const update = useServerFn(updateDeliveryProvider);
   const del = useServerFn(deleteDeliveryProvider);
   const test = useServerFn(testDeliveryProvider);
-  const fetchSenders = useServerFn(fetchAmeexSenders);
-  const [senders, setSenders] = useState<Array<{ id: string; label: string }>>([]);
-  const [senderAttempts, setSenderAttempts] = useState<
-    Array<{ url: string; status: number; body: string }>
-  >([]);
-
-  const sendersMut = useMutation({
-    mutationFn: () => fetchSenders({ data: { id: editId! } }),
-    onSuccess: (r: any) => {
-      setSenders(r?.senders ?? []);
-      setSenderAttempts(r?.attempts ?? []);
-      if (!r?.senders?.length) {
-        toast.error(
-          "Couldn't auto-fetch senders. See probe details below or copy the exact sender ID from your Ameex dashboard.",
-        );
-      } else {
-        toast.success(`Found ${r.senders.length} sender(s) — pick one below.`);
-      }
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
 
   const openEdit = (p: any) => {
     setEditId(p.id);
@@ -559,10 +536,7 @@ function DeliveryTab({
     setEditProviderType(p.provider_type ?? "ameex");
     setEditApiId(p.api_id ?? "");
     setEditApiKey(p.api_key ?? "");
-    setEditBusinessId(p.business_id ?? "");
     setEditBaseApi(p.base_url ?? "https://api.ameex.app");
-    setSenders([]);
-    setSenderAttempts([]);
     setEditOpen(true);
   };
 
@@ -575,7 +549,6 @@ function DeliveryTab({
           api_id: apiId,
           api_key: apiKey,
           base_url: baseApi,
-          business_id: businessId,
         },
       }),
     onSuccess: () => {
@@ -598,7 +571,6 @@ function DeliveryTab({
           api_id: editApiId,
           api_key: editApiKey,
           base_url: editBaseApi,
-          business_id: editBusinessId,
         },
       }),
     onSuccess: () => {
@@ -743,17 +715,6 @@ function DeliveryTab({
               />
             </div>
             <div>
-              <Label>Sender / Expéditeur ID</Label>
-              <Input
-                value={businessId}
-                onChange={(e) => setBusinessId(e.target.value)}
-                placeholder="2"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Required by Ameex to choose the sender account.
-              </p>
-            </div>
-            <div>
               <Label>Base URL</Label>
               <Input value={baseApi} onChange={(e) => setBaseApi(e.target.value)} />
             </div>
@@ -774,7 +735,7 @@ function DeliveryTab({
           <DialogHeader>
             <DialogTitle>Edit delivery provider</DialogTitle>
             <DialogDescription>
-              Update credentials or sender ID. Changes apply immediately to new shipments.
+              Update credentials. Changes apply immediately to new shipments.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -801,78 +762,6 @@ function DeliveryTab({
             <div>
               <Label>API Key</Label>
               <Input value={editApiKey} onChange={(e) => setEditApiKey(e.target.value)} />
-            </div>
-            <div>
-              <div className="flex items-center justify-between">
-                <Label>Sender / Expéditeur ID</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => sendersMut.mutate()}
-                  disabled={sendersMut.isPending || !editId}
-                >
-                  {sendersMut.isPending ? "Fetching…" : "Fetch from Ameex"}
-                </Button>
-              </div>
-              {senders.length > 0 && (
-                <Select
-                  value={editBusinessId}
-                  onValueChange={(v) => setEditBusinessId(v)}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Pick a sender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {senders.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Input
-                className="mt-2"
-                value={editBusinessId}
-                onChange={(e) => setEditBusinessId(e.target.value)}
-                placeholder="e.g. 2"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Click "Fetch from Ameex" to load valid sender IDs from your account, or paste
-                the exact ID copied from the Ameex dashboard.
-              </p>
-              {senderAttempts.length > 0 && (
-                <details className="mt-2 rounded-md border bg-muted/30 p-2">
-                  <summary className="cursor-pointer text-xs font-medium">
-                    Probe details ({senderAttempts.length} endpoint
-                    {senderAttempts.length > 1 ? "s" : ""} tried)
-                  </summary>
-                  <div className="mt-2 max-h-48 space-y-2 overflow-y-auto text-xs font-mono">
-                    {senderAttempts.map((a, i) => (
-                      <div key={i} className="rounded bg-background p-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate">{a.url}</span>
-                          <span
-                            className={
-                              a.status >= 200 && a.status < 300
-                                ? "text-emerald-600"
-                                : "text-destructive"
-                            }
-                          >
-                            {a.status}
-                          </span>
-                        </div>
-                        {a.body && (
-                          <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap break-all text-[10px] text-muted-foreground">
-                            {a.body.slice(0, 400)}
-                          </pre>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
             </div>
             <div>
               <Label>Base URL</Label>
