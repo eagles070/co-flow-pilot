@@ -18,6 +18,12 @@ type AmeexProvider = {
   business_id?: string | null;
 };
 
+function normalizeAmount(value: number | string) {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(amount)) return 0;
+  return Math.max(0, amount);
+}
+
 export function getAmeexBusinessId(provider: AmeexProvider): string | null {
   const businessId = provider.business_id?.trim();
   if (businessId) return businessId;
@@ -38,6 +44,7 @@ export function buildAmeexParcelForm({
   const form = new FormData();
   const productLabel = items.map((item) => `${item.product_name} x${item.quantity}`).join(", ") || "Order";
   const businessId = getAmeexBusinessId(provider);
+  const codAmount = normalizeAmount(order.total_amount);
 
   form.append("type", "SIMPLE");
   form.append("order_num", order.reference);
@@ -51,10 +58,14 @@ export function buildAmeexParcelForm({
   form.append("address", order.shipping_address || "N/A");
   form.append("comment", order.notes || "");
   form.append("product", productLabel);
-  form.append("cod", String(order.total_amount));
+  form.append("cod", String(codAmount));
 
   if (businessId) {
     form.append("business", businessId);
+  }
+
+  if (codAmount > 0) {
+    form.append("CRBT", "0");
   }
 
   return form;

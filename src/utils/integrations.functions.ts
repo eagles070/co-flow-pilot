@@ -437,7 +437,11 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
     const text = await res.text();
     const parsed = parseAmeexResponse(text);
     const trackingNumber = findAmeexTracking(parsed);
-    const ameexError = getAmeexErrorMessage(parsed);
+    const rawAmeexError = getAmeexErrorMessage(parsed);
+    const ameexError =
+      rawAmeexError?.includes("CRBT") && Number(order.total_amount) <= 0
+        ? "Ameex requires a positive order amount before creating a parcel. Update the order total, then retry."
+        : rawAmeexError;
     const ameexSuccess = isAmeexSuccessResponse(parsed);
 
     await logIntegration(db, {
