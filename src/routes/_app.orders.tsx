@@ -520,7 +520,7 @@ function OrdersPage() {
                 <TableHead className="text-center">NRP</TableHead>
                 <TableHead>Waiting</TableHead>
                 <TableHead>Last action</TableHead>
-                <TableHead className="w-44 text-right">Actions</TableHead>
+                <TableHead className="w-32 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
