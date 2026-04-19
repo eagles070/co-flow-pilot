@@ -517,9 +517,30 @@ function DeliveryTab({
   const [businessId, setBusinessId] = useState("");
   const [baseApi, setBaseApi] = useState("https://api.ameex.app");
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editProviderType, setEditProviderType] = useState("ameex");
+  const [editApiId, setEditApiId] = useState("");
+  const [editApiKey, setEditApiKey] = useState("");
+  const [editBusinessId, setEditBusinessId] = useState("");
+  const [editBaseApi, setEditBaseApi] = useState("https://api.ameex.app");
+
   const create = useServerFn(createDeliveryProvider);
+  const update = useServerFn(updateDeliveryProvider);
   const del = useServerFn(deleteDeliveryProvider);
   const test = useServerFn(testDeliveryProvider);
+
+  const openEdit = (p: any) => {
+    setEditId(p.id);
+    setEditName(p.name ?? "");
+    setEditProviderType(p.provider_type ?? "ameex");
+    setEditApiId(p.api_id ?? "");
+    setEditApiKey(p.api_key ?? "");
+    setEditBusinessId(p.business_id ?? "");
+    setEditBaseApi(p.base_url ?? "https://api.ameex.app");
+    setEditOpen(true);
+  };
 
   const createMut = useMutation({
     mutationFn: () =>
