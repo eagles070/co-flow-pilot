@@ -1,225 +1,259 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  ShoppingBag, CheckCircle2, Truck, XCircle, TrendingUp, DollarSign,
-  Phone, ArrowUpRight, ArrowDownRight,
+  ShoppingBag, Inbox, PhoneCall, PhoneMissed, Users, Clock, Truck, CheckCircle2,
+  PackageX, RotateCw, DollarSign, Wallet, Receipt, Percent, ListChecks,
 } from "lucide-react";
 import {
-  Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
-  BarChart, Bar, Legend,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
+  PieChart, Pie, Legend,
 } from "recharts";
+import { useDashboardData, type DashboardFilters } from "@/hooks/use-dashboard-data";
+import { KpiCard } from "@/components/dashboard/KpiCard";
+import { SmartAlerts, type SmartAlert } from "@/components/dashboard/SmartAlerts";
+import { ConfirmationFunnel } from "@/components/dashboard/ConfirmationFunnel";
+import { PerformanceList } from "@/components/dashboard/PerformanceLists";
+import { LiveFeed } from "@/components/dashboard/LiveFeed";
+import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 
 export const Route = createFileRoute("/_app/")({
   component: Dashboard,
 });
 
-const trendData = [
-  { day: "Mon", orders: 145, confirmed: 92, delivered: 71 },
-  { day: "Tue", orders: 168, confirmed: 110, delivered: 84 },
-  { day: "Wed", orders: 152, confirmed: 98, delivered: 79 },
-  { day: "Thu", orders: 189, confirmed: 124, delivered: 96 },
-  { day: "Fri", orders: 215, confirmed: 148, delivered: 112 },
-  { day: "Sat", orders: 198, confirmed: 132, delivered: 105 },
-  { day: "Sun", orders: 176, confirmed: 118, delivered: 91 },
-];
-
-const perfData = [
-  { name: "Confirmed", value: 68 },
-  { name: "Delivered", value: 52 },
-  { name: "Returned", value: 11 },
-  { name: "Cancelled", value: 18 },
-];
-
-interface KpiProps {
-  label: string;
-  value: string;
-  delta?: string;
-  trend?: "up" | "down";
-  icon: React.ComponentType<{ className?: string }>;
-  tone?: "default" | "success" | "warning" | "info" | "destructive";
+function fmtMoney(n: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
-
-function Kpi({ label, value, delta, trend, icon: Icon, tone = "default" }: KpiProps) {
-  const toneClass = {
-    default: "bg-primary/10 text-primary",
-    success: "bg-success/10 text-success",
-    warning: "bg-warning/15 text-warning",
-    info: "bg-info/10 text-info",
-    destructive: "bg-destructive/10 text-destructive",
-  }[tone];
-
-  return (
-    <Card className="overflow-hidden border-border/60 transition-shadow hover:shadow-[var(--shadow-md)]">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
-            {delta && (
-              <div className="mt-1 flex items-center gap-1 text-xs">
-                {trend === "up" ? (
-                  <ArrowUpRight className="h-3 w-3 text-success" />
-                ) : (
-                  <ArrowDownRight className="h-3 w-3 text-destructive" />
-                )}
-                <span className={trend === "up" ? "text-success" : "text-destructive"}>{delta}</span>
-                <span className="text-muted-foreground">vs last week</span>
-              </div>
-            )}
-          </div>
-          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${toneClass}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+function fmtSeconds(s: number) {
+  if (!s) return "0s";
+  const m = Math.floor(s / 60); const sec = Math.round(s % 60);
+  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
 }
 
 function Dashboard() {
+  const [filters, setFilters] = useState<DashboardFilters>({ range: "week" });
+  const [cities, setCities] = useState<string[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [sources, setSources] = useState<string[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const [c, p, s] = await Promise.all([
+        supabase.from("cities").select("name").eq("is_active", true).order("name"),
+        supabase.from("products").select("id,name").eq("is_active", true).order("name").limit(200),
+        supabase.from("order_sources").select("name").eq("is_active", true).order("sort_order"),
+      ]);
+      setCities((c.data ?? []).map((x) => x.name));
+      setProducts((p.data ?? []) as any);
+      setSources((s.data ?? []).map((x) => x.name.toLowerCase().replace(/\s+/g, "_")));
+    })();
+  }, []);
+
+  const { data } = useDashboardData(filters);
+
+  const alerts = useMemo<SmartAlert[]>(() => {
+    const a: SmartAlert[] = [];
+    const confRate = data.totalOrders > 0 ? (data.confirmed / data.totalOrders) * 100 : 0;
+    const returnRate = (data.delivered + data.refusedReturned) > 0 ? (data.refusedReturned / (data.delivered + data.refusedReturned)) * 100 : 0;
+    const nrpRate = data.totalOrders > 0 ? (data.nrpOrders / data.totalOrders) * 100 : 0;
+    if (data.totalOrders >= 5 && nrpRate > 25) a.push({ kind: "danger", icon: "warn", title: `High NRP rate: ${nrpRate.toFixed(1)}%`, detail: `${data.nrpOrders} orders with no reply` });
+    if (data.totalOrders >= 5 && confRate < 50) a.push({ kind: "warn", icon: "trend", title: `Low confirmation rate: ${confRate.toFixed(1)}%`, detail: "Review agent capacity and call flow" });
+    if ((data.delivered + data.refusedReturned) >= 5 && returnRate > 20) a.push({ kind: "danger", icon: "trend", title: `High return rate: ${returnRate.toFixed(1)}%`, detail: `${data.refusedReturned} returns vs ${data.delivered} delivered` });
+    if (data.lowStockCount > 0) a.push({ kind: "warn", icon: "stock", title: `${data.lowStockCount} product${data.lowStockCount > 1 ? "s" : ""} low on stock`, detail: data.lowStockProducts.join(", ") });
+    if (data.problemProducts.length > 0 && data.problemProducts[0].rate > 30) {
+      const p = data.problemProducts[0];
+      a.push({ kind: "warn", icon: "product", title: `Poor performer: ${p.name}`, detail: `${p.rate.toFixed(0)}% return rate` });
+    }
+    return a;
+  }, [data]);
+
+  const deliveryPerf = [
+    { name: "Delivered", value: data.delivered, color: "var(--color-success)" },
+    { name: "Refused / Returned", value: data.refusedReturned, color: "var(--color-destructive)" },
+    { name: "In transit", value: data.inTransit, color: "var(--color-info)" },
+  ];
+
+  const nrpData = [
+    { name: "Day 1", value: data.nrpDay1 },
+    { name: "Day 2", value: data.nrpDay2 },
+    { name: "Day 3+", value: data.nrpDay3 },
+  ];
+
+  const deliveryRate = (data.delivered + data.refusedReturned) > 0
+    ? (data.delivered / (data.delivered + data.refusedReturned)) * 100 : 0;
+
   return (
     <div>
       <PageHeader
-        title="Dashboard"
-        description="Real-time overview of your COD operations."
-        actions={<Badge variant="outline" className="gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" /> Live</Badge>}
+        title="Operations Dashboard"
+        description="Real-time overview of orders, call center, delivery, and finance."
+        actions={
+          <Badge variant="outline" className="gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" /> Live
+          </Badge>
+        }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Total Orders" value="1,243" delta="+12.4%" trend="up" icon={ShoppingBag} />
-        <Kpi label="Confirmed" value="842" delta="+8.1%" trend="up" icon={CheckCircle2} tone="info" />
-        <Kpi label="Delivered" value="638" delta="+5.6%" trend="up" icon={Truck} tone="success" />
-        <Kpi label="Cancelled / Refused" value="124" delta="-3.2%" trend="down" icon={XCircle} tone="destructive" />
-      </div>
+      <div className="space-y-5">
+        <DashboardFilterBar filters={filters} onChange={setFilters} cities={cities} products={products} sources={sources} />
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Confirmation Rate" value="67.7%" delta="+2.1%" trend="up" icon={Phone} tone="info" />
-        <Kpi label="Delivery Rate" value="75.8%" delta="+1.4%" trend="up" icon={TrendingUp} tone="success" />
-        <Kpi label="Revenue" value="$48,920" delta="+14.2%" trend="up" icon={DollarSign} />
-        <Kpi label="Profit" value="$12,180" delta="+9.7%" trend="up" icon={DollarSign} tone="success" />
-      </div>
+        {alerts.length > 0 && <SmartAlerts alerts={alerts} />}
 
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Orders trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
-                  <defs>
-                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-success)" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="var(--color-success)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="day" stroke="var(--color-muted-foreground)" fontSize={12} />
-                  <YAxis stroke="var(--color-muted-foreground)" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--color-popover)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                  />
-                  <Area type="monotone" dataKey="orders" stroke="var(--color-primary)" fill="url(#g1)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="delivered" stroke="var(--color-success)" fill="url(#g2)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Orders */}
+        <section>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">📦 Orders</h2>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiCard label="Total orders" value={data.totalOrders.toLocaleString()} icon={ShoppingBag} />
+            <KpiCard label="New orders" value={data.newOrders.toLocaleString()} icon={Inbox} tone="info" hint="Not treated yet" />
+            <KpiCard label="Waiting confirmation" value={data.waitingConfirmation.toLocaleString()} icon={ListChecks} tone="warning" />
+            <KpiCard label="NRP orders" value={data.nrpOrders.toLocaleString()} icon={PhoneMissed} tone="destructive" />
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Performance breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={perfData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis type="number" stroke="var(--color-muted-foreground)" fontSize={12} />
-                  <YAxis dataKey="name" type="category" stroke="var(--color-muted-foreground)" fontSize={12} width={80} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--color-popover)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                  />
-                  <Bar dataKey="value" fill="var(--color-primary)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Call center */}
+        <section>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">📞 Call center</h2>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiCard label="Orders in queue" value={data.inQueue.toLocaleString()} icon={Inbox} tone="warning" />
+            <KpiCard label="Treated today" value={data.treatedToday.toLocaleString()} icon={PhoneCall} tone="info" />
+            <KpiCard label="Active agents" value={data.activeAgents.toLocaleString()} icon={Users} />
+            <KpiCard label="Avg call time" value={fmtSeconds(data.avgCallSeconds)} icon={Clock} />
+          </div>
+        </section>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Confirmation trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-60">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="day" stroke="var(--color-muted-foreground)" fontSize={12} />
-                  <YAxis stroke="var(--color-muted-foreground)" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--color-popover)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="orders" fill="var(--color-chart-4)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="confirmed" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Delivery */}
+        <section>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">🚚 Delivery</h2>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiCard label="Sent to delivery" value={data.sentToDelivery.toLocaleString()} icon={Truck} tone="info" />
+            <KpiCard label="Delivered" value={data.delivered.toLocaleString()} icon={CheckCircle2} tone="success" />
+            <KpiCard label="Refused / Returned" value={data.refusedReturned.toLocaleString()} icon={PackageX} tone="destructive" />
+            <KpiCard label="In transit" value={data.inTransit.toLocaleString()} icon={RotateCw} tone="info" />
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">What's next</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm">
-              <p className="text-muted-foreground">
-                Phase 1 is live — auth, role system, app shell, and dashboard skeleton are ready.
-              </p>
-              <ul className="space-y-2">
-                {[
-                  "Phase 2 — Orders module (table, filters, bulk assign, sources)",
-                  "Phase 3 — Call Center workflow with NRP/recall logic",
-                  "Phase 4 — Delivery sync, Inventory and Sourcing",
-                  "Phase 5 — Finance, Team performance, Blacklist, Logs",
-                ].map((t) => (
-                  <li key={t} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    <span>{t}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Finance */}
+        <section>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">💰 Finance</h2>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiCard label="Revenue (delivered)" value={fmtMoney(data.revenue)} icon={DollarSign} tone="success" />
+            <KpiCard label="Estimated profit" value={fmtMoney(data.estimatedProfit)} icon={Wallet} tone={data.estimatedProfit >= 0 ? "success" : "destructive"} />
+            <KpiCard label="Total expenses" value={fmtMoney(data.totalExpenses)} icon={Receipt} tone="warning" />
+            <KpiCard label="Margin" value={`${data.margin.toFixed(1)}%`} icon={Percent} tone={data.margin >= 15 ? "success" : data.margin >= 0 ? "warning" : "destructive"} />
+          </div>
+        </section>
+
+        {/* Charts row */}
+        <section className="grid gap-4 lg:grid-cols-3">
+          <ConfirmationFunnel total={data.totalOrders} confirmed={data.confirmed} delivered={data.delivered} />
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">NRP analysis</CardTitle>
+              <p className="text-xs text-muted-foreground">No-reply orders by attempt</p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={nrpData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis dataKey="name" stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <YAxis stroke="var(--color-muted-foreground)" fontSize={12} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "var(--color-popover)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                      {nrpData.map((_, i) => (
+                        <Cell key={i} fill={i === 0 ? "var(--color-warning)" : i === 1 ? "var(--color-info)" : "var(--color-destructive)"} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Delivery performance</CardTitle>
+              <p className="text-xs text-muted-foreground">Delivery rate: <span className="font-medium text-foreground">{deliveryRate.toFixed(1)}%</span></p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={deliveryPerf} dataKey="value" nameKey="name" innerRadius={45} outerRadius={75} paddingAngle={2}>
+                      {deliveryPerf.map((d, i) => (<Cell key={i} fill={d.color} />))}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: "var(--color-popover)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Team performance */}
+        <section className="grid gap-4 lg:grid-cols-2">
+          <PerformanceList
+            title="Top agents"
+            description="Highest confirmed orders"
+            rows={data.topAgents}
+            primaryLabel="Confirmed"
+            secondaryLabel="Delivered"
+            empty="No agent activity yet"
+          />
+          <PerformanceList
+            title="Worst agents"
+            description="High NRP rate"
+            rows={data.worstAgents.map((a) => ({ name: a.name, primary: a.primary, badge: { text: `${a.rate.toFixed(0)}% NRP`, tone: "bad" as const } }))}
+            primaryLabel="NRP"
+            empty="No problem agents detected"
+          />
+        </section>
+
+        {/* Product performance */}
+        <section className="grid gap-4 lg:grid-cols-2">
+          <PerformanceList
+            title="Top selling products"
+            description="By delivered units"
+            rows={data.topProducts}
+            primaryLabel="Sold"
+            empty="No product sales yet"
+          />
+          <PerformanceList
+            title="Problem products"
+            description="High return / refusal rate"
+            rows={data.problemProducts.map((p) => ({ name: p.name, primary: p.primary, badge: { text: `${p.rate.toFixed(0)}% returned`, tone: "bad" as const } }))}
+            primaryLabel="Returned"
+            empty="No problem products"
+          />
+        </section>
+
+        {/* City performance */}
+        <section className="grid gap-4 lg:grid-cols-2">
+          <PerformanceList
+            title="Top cities"
+            description="Highest delivery volume"
+            rows={data.topCities.map((c) => ({ name: c.name, primary: c.primary, badge: { text: `${c.rate.toFixed(0)}%`, tone: "good" as const } }))}
+            primaryLabel="Delivered"
+            empty="No city data yet"
+          />
+          <PerformanceList
+            title="Problem cities"
+            description="High refusal rate"
+            rows={data.problemCities.map((c) => ({ name: c.name, primary: c.primary, badge: { text: `${c.rate.toFixed(0)}% refused`, tone: "bad" as const } }))}
+            primaryLabel="Refused"
+            empty="No problem cities"
+          />
+        </section>
+
+        {/* Live feed */}
+        <section>
+          <LiveFeed orders={data.recentOrders} activity={data.recentActivity} />
+        </section>
       </div>
     </div>
   );
