@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { Download, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -147,6 +147,26 @@ export function CitiesTab({ isAdmin }: Props) {
     load();
   };
 
+  const downloadTemplate = () => {
+    const csv = [
+      "city_name,delivery_price,refused_price",
+      "Casablanca,25,10",
+      "Rabat,30,12",
+      "Marrakech,35,15",
+      "Tanger,40,18",
+      "Fes,35,15",
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cities_template.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const filtered = rows.filter((r) =>
     search ? r.name.toLowerCase().includes(search.toLowerCase()) : true,
   );
@@ -173,6 +193,9 @@ export function CitiesTab({ isAdmin }: Props) {
               className="hidden"
               onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])}
             />
+            <Button size="sm" variant="outline" onClick={downloadTemplate}>
+              <Download className="mr-2 h-4 w-4" /> Template
+            </Button>
             <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
               <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
