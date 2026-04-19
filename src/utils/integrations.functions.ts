@@ -317,6 +317,43 @@ export const createDeliveryProvider = createServerFn({ method: "POST" })
     return row;
   });
 
+export const updateDeliveryProvider = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: {
+      id: string;
+      name?: string;
+      provider_type?: string;
+      api_id?: string;
+      api_key?: string;
+      base_url?: string;
+      business_id?: string;
+    }) => {
+      if (!input.id) throw new Error("Provider id required");
+      return input;
+    },
+  )
+  .handler(async ({ data, context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const patch: Record<string, any> = {};
+    if (data.name !== undefined) patch.name = data.name;
+    if (data.provider_type !== undefined) patch.provider_type = data.provider_type;
+    if (data.api_id !== undefined) patch.api_id = data.api_id;
+    if (data.api_key !== undefined) patch.api_key = data.api_key;
+    if (data.base_url !== undefined) patch.base_url = data.base_url;
+    if (data.business_id !== undefined) patch.business_id = data.business_id || null;
+    patch.updated_at = new Date().toISOString();
+
+    const { data: row, error } = await context.supabase
+      .from("delivery_providers")
+      .update(patch as any)
+      .eq("id", data.id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 export const deleteDeliveryProvider = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { id: string }) => input)

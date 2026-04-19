@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, FileSpreadsheet, Truck, Copy, RefreshCw, Trash2, Send, Plus } from "lucide-react";
+import { ShoppingBag, FileSpreadsheet, Truck, Copy, RefreshCw, Trash2, Send, Plus, Pencil } from "lucide-react";
 import {
   listIntegrations,
   createShopifyStore,
@@ -43,6 +43,7 @@ import {
   deleteSheetsIntegration,
   syncSheetNow,
   createDeliveryProvider,
+  updateDeliveryProvider,
   deleteDeliveryProvider,
   testDeliveryProvider,
 } from "@/utils/integrations.functions";
@@ -516,9 +517,30 @@ function DeliveryTab({
   const [businessId, setBusinessId] = useState("");
   const [baseApi, setBaseApi] = useState("https://api.ameex.app");
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editProviderType, setEditProviderType] = useState("ameex");
+  const [editApiId, setEditApiId] = useState("");
+  const [editApiKey, setEditApiKey] = useState("");
+  const [editBusinessId, setEditBusinessId] = useState("");
+  const [editBaseApi, setEditBaseApi] = useState("https://api.ameex.app");
+
   const create = useServerFn(createDeliveryProvider);
+  const update = useServerFn(updateDeliveryProvider);
   const del = useServerFn(deleteDeliveryProvider);
   const test = useServerFn(testDeliveryProvider);
+
+  const openEdit = (p: any) => {
+    setEditId(p.id);
+    setEditName(p.name ?? "");
+    setEditProviderType(p.provider_type ?? "ameex");
+    setEditApiId(p.api_id ?? "");
+    setEditApiKey(p.api_key ?? "");
+    setEditBusinessId(p.business_id ?? "");
+    setEditBaseApi(p.base_url ?? "https://api.ameex.app");
+    setEditOpen(true);
+  };
 
   const createMut = useMutation({
     mutationFn: () =>
@@ -537,6 +559,28 @@ function DeliveryTab({
       setOpen(false);
       setApiId("");
       setApiKey("");
+      onChange();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: () =>
+      update({
+        data: {
+          id: editId!,
+          name: editName,
+          provider_type: editProviderType,
+          api_id: editApiId,
+          api_key: editApiKey,
+          base_url: editBaseApi,
+          business_id: editBusinessId,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Provider updated");
+      setEditOpen(false);
+      setEditId(null);
       onChange();
     },
     onError: (e: any) => toast.error(e.message),
@@ -615,6 +659,14 @@ function DeliveryTab({
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => openEdit(p)}
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => del({ data: { id: p.id } }).then(onChange)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -688,6 +740,69 @@ function DeliveryTab({
             </Button>
             <Button onClick={() => createMut.mutate()} disabled={createMut.isPending}>
               {createMut.isPending ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit delivery provider</DialogTitle>
+            <DialogDescription>
+              Update credentials or sender ID. Changes apply immediately to new shipments.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Display name</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div>
+              <Label>Type</Label>
+              <Select value={editProviderType} onValueChange={setEditProviderType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ameex">Ameex</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>API ID</Label>
+              <Input value={editApiId} onChange={(e) => setEditApiId(e.target.value)} />
+            </div>
+            <div>
+              <Label>API Key</Label>
+              <Input value={editApiKey} onChange={(e) => setEditApiKey(e.target.value)} />
+            </div>
+            <div>
+              <Label>Sender / Expéditeur ID</Label>
+              <Input
+                value={editBusinessId}
+                onChange={(e) => setEditBusinessId(e.target.value)}
+                placeholder="2"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Required by Ameex to choose the sender account.
+              </p>
+            </div>
+            <div>
+              <Label>Base URL</Label>
+              <Input value={editBaseApi} onChange={(e) => setEditBaseApi(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateMut.mutate()}
+              disabled={updateMut.isPending || !editId}
+            >
+              {updateMut.isPending ? "Saving…" : "Save changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
