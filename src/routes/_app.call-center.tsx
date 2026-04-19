@@ -88,6 +88,8 @@ function CallCenterPage() {
   const [loading, setLoading] = useState(false);
   const [stores, setStores] = useState<StoreOpt[]>([]);
   const [editOpen, setEditOpen] = useState<string | null>(null);
+  const [statuses, setStatuses] = useState<StatusOpt[]>([]);
+  const [dropdownStatus, setDropdownStatus] = useState<string>("");
 
   const [note, setNote] = useState("");
   const [recallAt, setRecallAt] = useState("");
