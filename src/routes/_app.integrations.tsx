@@ -667,12 +667,15 @@ function DeliveryTab({
               />
             </div>
             <div>
-              <Label>Business ID (optional)</Label>
+              <Label>Sender / Expéditeur ID</Label>
               <Input
                 value={businessId}
                 onChange={(e) => setBusinessId(e.target.value)}
                 placeholder="2"
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Required by Ameex to choose the sender account.
+              </p>
             </div>
             <div>
               <Label>Base URL</Label>

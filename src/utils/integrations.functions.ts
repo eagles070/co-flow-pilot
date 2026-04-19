@@ -390,7 +390,13 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
 
     const form = new FormData();
     form.append("type", "SIMPLE");
-    if (provider.business_id) form.append("business", provider.business_id);
+    if (provider.business_id) {
+      form.append("business", provider.business_id);
+      form.append("sender", provider.business_id);
+      form.append("sender_id", provider.business_id);
+      form.append("expediteur", provider.business_id);
+      form.append("expediteur_id", provider.business_id);
+    }
     form.append("order_num", order.reference);
     form.append("replace", "true");
     form.append("open", "YES");
