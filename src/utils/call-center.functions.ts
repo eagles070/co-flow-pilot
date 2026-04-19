@@ -127,8 +127,36 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       };
     }
 
-    // 4) Push to Ameex
-    const form = buildAmeexParcelForm({ order, items, provider });
+    // 4) Resolve Ameex city ID from our cities table (matched by name)
+    let ameexCityId: string | null = null;
+    if (order.city) {
+      const { data: cityRow } = await db
+        .from("cities")
+        .select("ameex_city_id")
+        .ilike("name", order.city)
+        .maybeSingle();
+      ameexCityId = (cityRow as any)?.ameex_city_id || null;
+    }
+
+    if (!ameexCityId) {
+      return {
+        ok: false,
+        stock: { applied: stockApplied, errors: stockErrors },
+        ameex: {
+          ok: false,
+          error: order.city
+            ? `City "${order.city}" is not mapped to an Ameex city ID. Open Settings → Cities and pick the matching Ameex city.`
+            : "Order has no city. Edit the order and pick a city, then map it in Settings → Cities.",
+        },
+      };
+    }
+
+    // 5) Push to Ameex
+    const form = buildAmeexParcelForm({
+      order: { ...order, ameex_city_id: ameexCityId } as any,
+      items,
+      provider,
+    });
 
     const url = `${provider.base_url}/customer/Delivery/Parcels/Action/Type/Add`;
 
