@@ -537,11 +537,16 @@ function OrdersPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((o) => (
+                filtered.map((o) => {
+                  const isDelivered = o.status === "delivered";
+                  const isCancelled =
+                    o.status === "cancelled" || o.status === "refused" || o.status === "returned";
+                  const locked = isDelivered;
+                  return (
                   <TableRow
                     key={o.id}
                     data-state={selected.has(o.id) ? "selected" : undefined}
-                    className={cn("cursor-pointer", rowTone(o.status))}
+                    className={cn("group cursor-pointer", rowTone(o.status))}
                     onClick={() => setDetailId(o.id)}
                   >
                     {canManage && (
@@ -551,29 +556,37 @@ function OrdersPage() {
                     )}
                     <TableCell className="font-mono text-xs">{o.reference}</TableCell>
                     <TableCell className="font-medium">{o.customer_name}</TableCell>
-                    <TableCell>{o.customer_phone}</TableCell>
+                    <TableCell className="tabular-nums">{o.customer_phone}</TableCell>
                     <TableCell>{o.city ?? "—"}</TableCell>
-                    <TableCell className="max-w-[200px] text-sm">
+                    <TableCell className="max-w-[180px] text-sm">
                       {o.order_items && o.order_items.length > 0 ? (
-                        <div className="space-y-0.5">
-                          {o.order_items.slice(0, 2).map((it, idx) => (
-                            <div key={idx} className="truncate" title={`${it.product_name} × ${it.quantity}`}>
-                              <span className="text-muted-foreground">{it.quantity}×</span> {it.product_name}
-                            </div>
-                          ))}
-                          {o.order_items.length > 2 && (
-                            <div className="text-xs text-muted-foreground">+{o.order_items.length - 2} more</div>
+                        <div
+                          className="truncate"
+                          title={o.order_items.map((it) => `${it.quantity}× ${it.product_name}`).join(", ")}
+                        >
+                          <span className="text-muted-foreground">{o.order_items[0].quantity}×</span>{" "}
+                          {o.order_items[0].product_name}
+                          {o.order_items.length > 1 && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              +{o.order_items.length - 1}
+                            </span>
                           )}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">{Number(o.total_amount).toFixed(2)}</TableCell>
+                    <TableCell className="font-medium tabular-nums">{Number(o.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">{o.source.replace("_", " ")}</Badge>
                     </TableCell>
-                    <TableCell className="text-sm">{agentName(o.agent_id)}</TableCell>
+                    <TableCell className="text-sm">
+                      {o.agent_id ? (
+                        agentName(o.agent_id)
+                      ) : (
+                        <span className="italic text-muted-foreground">Unassigned</span>
+                      )}
+                    </TableCell>
                     <TableCell onClick={stop}>
                       <Select value={o.status} onValueChange={(v) => updateStatus(o.id, v as OrderStatus)}>
                         <SelectTrigger className="h-8 w-[140px] border-0 bg-transparent p-0 hover:bg-accent/50">
@@ -600,15 +613,21 @@ function OrdersPage() {
                         <span className="text-xs text-muted-foreground">0</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{timeAgo(o.created_at)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {timeAgo(o.created_at)}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{timeAgo(o.updated_at)}</TableCell>
                     <TableCell className="text-right" onClick={stop}>
-                      <div className="flex justify-end gap-0.5">
+                      <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
                           title="Call"
+                          disabled={locked}
                           onClick={() => callPhone(o.customer_phone)}
                         >
                           <Phone className="h-4 w-4" />
@@ -618,39 +637,48 @@ function OrdersPage() {
                           size="icon"
                           className="h-8 w-8 text-success hover:text-success"
                           title="Confirm"
+                          disabled={locked || isCancelled || o.status === "confirmed"}
                           onClick={() => updateStatus(o.id, "confirmed")}
                         >
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          title="Cancel"
-                          onClick={() => updateStatus(o.id, "cancelled")}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                        {canManage && (
-                          <>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => setEditingId(o.id)}>
-                              <Pencil className="h-4 w-4" />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="More">
+                              <MoreVertical className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              title="Delete"
-                              onClick={() => setDeletingId(o.id)}
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                              disabled={locked || isCancelled}
+                              onClick={() => updateStatus(o.id, "cancelled")}
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
+                              <XCircle className="h-4 w-4" />
+                              Cancel
+                            </DropdownMenuItem>
+                            {canManage && (
+                              <>
+                                <DropdownMenuItem disabled={locked} onClick={() => setEditingId(o.id)}>
+                                  <Pencil className="h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => setDeletingId(o.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
