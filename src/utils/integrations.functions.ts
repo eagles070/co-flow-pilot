@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 type Role = "admin" | "moderator" | "agent" | "media_buyer";
 
@@ -19,7 +18,7 @@ function randomToken(len = 32) {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function logIntegration(entry: {
+async function logIntegration(supabase: any, entry: {
   provider_type: string;
   provider_id?: string | null;
   direction: string;
@@ -29,16 +28,20 @@ async function logIntegration(entry: {
   payload?: unknown;
   error?: string;
 }) {
-  await supabaseAdmin.from("integration_logs").insert({
-    provider_type: entry.provider_type,
-    provider_id: entry.provider_id ?? null,
-    direction: entry.direction,
-    endpoint: entry.endpoint ?? null,
-    http_status: entry.http_status ?? null,
-    status: entry.status,
-    payload: entry.payload ? (entry.payload as any) : null,
-    error: entry.error ?? null,
-  });
+  try {
+    await supabase.from("integration_logs").insert({
+      provider_type: entry.provider_type,
+      provider_id: entry.provider_id ?? null,
+      direction: entry.direction,
+      endpoint: entry.endpoint ?? null,
+      http_status: entry.http_status ?? null,
+      status: entry.status,
+      payload: entry.payload ? (entry.payload as any) : null,
+      error: entry.error ?? null,
+    });
+  } catch (error) {
+    console.error("Failed to write integration log", error);
+  }
 }
 
 // =================== LISTS ===================
@@ -47,20 +50,21 @@ export const listIntegrations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertStaff(context.supabase, context.userId);
+    const db = context.supabase;
     const [shopify, sheets, providers, logs] = await Promise.all([
-      supabaseAdmin
+      db
         .from("shopify_stores")
         .select("*")
         .order("created_at", { ascending: false }),
-      supabaseAdmin
+      db
         .from("google_sheets_integrations")
         .select("*")
         .order("created_at", { ascending: false }),
-      supabaseAdmin
+      db
         .from("delivery_providers")
         .select("*")
         .order("created_at", { ascending: false }),
-      supabaseAdmin
+      db
         .from("integration_logs")
         .select("*")
         .order("created_at", { ascending: false })
@@ -85,7 +89,7 @@ export const createShopifyStore = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
     const webhook_secret = randomToken(24);
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("shopify_stores")
       .insert({
         name: data.name,
@@ -104,7 +108,7 @@ export const deleteShopifyStore = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
-    const { error } = await supabaseAdmin.from("shopify_stores").delete().eq("id", data.id);
+    const { error } = await context.supabase.from("shopify_stores").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -127,7 +131,7 @@ export const createSheetsIntegration = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("google_sheets_integrations")
       .insert({
         name: data.name,
@@ -148,7 +152,7 @@ export const deleteSheetsIntegration = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
-    const { error } = await supabaseAdmin
+    const { error } = await context.supabase
       .from("google_sheets_integrations")
       .delete()
       .eq("id", data.id);
@@ -161,8 +165,9 @@ export const syncSheetNow = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string; provider_token?: string }) => input)
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
+    const db = context.supabase;
 
-    const { data: integ, error: ie } = await supabaseAdmin
+    const { data: integ, error: ie } = await db
       .from("google_sheets_integrations")
       .select("*")
       .eq("id", data.id)
@@ -171,7 +176,7 @@ export const syncSheetNow = createServerFn({ method: "POST" })
 
     const token = data.provider_token || integ.access_token;
     if (!token) {
-      await logIntegration({
+      await logIntegration(db, {
         provider_type: "sheets",
         provider_id: integ.id,
         direction: "outgoing",
@@ -190,7 +195,7 @@ export const syncSheetNow = createServerFn({ method: "POST" })
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const json: any = await res.json();
 
-    await logIntegration({
+    await logIntegration(db, {
       provider_type: "sheets",
       provider_id: integ.id,
       direction: "outgoing",
@@ -229,14 +234,14 @@ export const syncSheetNow = createServerFn({ method: "POST" })
       if (!phone || !name) continue;
 
       const externalId = extI >= 0 ? r[extI] : `sheet-${integ.id.slice(0, 6)}-${i}`;
-      const { data: exists } = await supabaseAdmin
+      const { data: exists } = await db
         .from("orders")
         .select("id")
         .eq("external_order_id", externalId)
         .maybeSingle();
       if (exists) continue;
 
-      const { data: order, error: oe } = await supabaseAdmin
+      const { data: order, error: oe } = await db
         .from("orders")
         .insert({
           customer_name: name,
@@ -252,7 +257,7 @@ export const syncSheetNow = createServerFn({ method: "POST" })
         .single();
 
       if (!oe && order && productI >= 0 && r[productI]) {
-        await supabaseAdmin.from("order_items").insert({
+        await db.from("order_items").insert({
           order_id: order.id,
           product_name: r[productI],
           quantity: 1,
@@ -262,7 +267,7 @@ export const syncSheetNow = createServerFn({ method: "POST" })
       if (!oe) imported++;
     }
 
-    await supabaseAdmin
+    await db
       .from("google_sheets_integrations")
       .update({
         last_sync_at: new Date().toISOString(),
