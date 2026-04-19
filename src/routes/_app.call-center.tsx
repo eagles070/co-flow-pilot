@@ -247,11 +247,11 @@ function CallCenterPage() {
         description={`${queue.length} order(s) in your queue · Max attempts: ${maxAttempts}`}
         actions={
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1.5 font-mono text-sm">
+            <Badge variant="outline" className={cn("gap-1.5 font-mono text-sm transition-colors", timerColor)}>
               <Timer className="h-3.5 w-3.5" />{fmtTimer(callSeconds)}
             </Badge>
             <Button variant="outline" size="sm" onClick={fetchQueue} disabled={loading}>
-              <RotateCcw className="mr-2 h-4 w-4" />Refresh
+              <RotateCcw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />Refresh
             </Button>
           </div>
         }
