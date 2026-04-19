@@ -659,6 +659,14 @@ function DeliveryTab({
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => openEdit(p)}
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => del({ data: { id: p.id } }).then(onChange)}
                       >
                         <Trash2 className="h-4 w-4" />
