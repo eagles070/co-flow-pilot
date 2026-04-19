@@ -219,11 +219,22 @@ export function CitiesTab({ isAdmin }: Props) {
     const rIdx = ["refused_price", "return_cost", "return_price"]
       .map((h) => headers.indexOf(h))
       .find((i) => i >= 0) ?? -1;
+    const aIdx = ["ameex_city_id", "ameex_id", "city_id"]
+      .map((h) => headers.indexOf(h))
+      .find((i) => i >= 0) ?? -1;
 
     if (nameIdx < 0)
-      return toast.error("Header missing. Expected: city_name,delivery_price,refused_price");
+      return toast.error(
+        "Header missing. Expected: city_name,ameex_city_id,delivery_price,refused_price",
+      );
 
-    const inserts: { name: string; delivery_cost: number; return_cost: number }[] = [];
+    type ImportRow = {
+      name: string;
+      delivery_cost: number;
+      return_cost: number;
+      ameex_city_id: string | null;
+    };
+    const inserts: ImportRow[] = [];
     for (const line of lines.slice(1)) {
       const cols = line.split(/[,;\t]/).map((c) => c.trim());
       const name = cols[nameIdx];
@@ -232,10 +243,11 @@ export function CitiesTab({ isAdmin }: Props) {
         name,
         delivery_cost: dIdx >= 0 ? Number(cols[dIdx]) || 0 : 0,
         return_cost: rIdx >= 0 ? Number(cols[rIdx]) || 0 : 0,
+        ameex_city_id: aIdx >= 0 && cols[aIdx] ? cols[aIdx] : null,
       });
     }
     if (!inserts.length) return toast.error("No rows parsed");
-    const dedupMap = new Map<string, { name: string; delivery_cost: number; return_cost: number }>();
+    const dedupMap = new Map<string, ImportRow>();
     for (const row of inserts) dedupMap.set(row.name.toLowerCase(), row);
     const deduped = Array.from(dedupMap.values());
     const { error } = await supabase.from("cities").upsert(deduped, { onConflict: "name" });
