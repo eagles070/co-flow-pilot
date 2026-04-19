@@ -265,8 +265,8 @@ function CallCenterPage() {
               <p className="text-sm">No orders waiting.</p>
             </CardContent>
           ) : (
-            <div key={current.id} className="animate-in fade-in-50 duration-200">
-              <CardHeader className="border-b">
+            <>
+              <CardHeader key={`h-${current.id}`} className="animate-in fade-in-50 border-b duration-200">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -435,7 +435,7 @@ function CallCenterPage() {
                   <Keyboard className="h-3 w-3" />Shortcuts: Enter Confirm · N No reply · P Postpone · C Cancel · S Skip
                 </div>
               </CardContent>
-            </div>
+            </>
           )}
         </Card>
 
