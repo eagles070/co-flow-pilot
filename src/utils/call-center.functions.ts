@@ -53,31 +53,37 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     const stockApplied: string[] = [];
 
     for (const item of items) {
-      let productId: string | null = item.product_id;
+      let productId: string | null = null;
 
-      // Try to resolve by SKU if product_name looks like a SKU or fallback by name
-      if (!productId) {
-        // 1) try exact SKU match
+      // 1) Prefer SKU match (the SKU entered on the product in Products/Stock page).
+      //    `product_name` from order_items often holds the SKU typed by the agent.
+      const skuCandidate = item.product_name?.trim();
+      if (skuCandidate) {
         const { data: bySku } = await db
           .from("products")
-          .select("id, sku, name")
-          .eq("sku", item.product_name)
+          .select("id")
+          .eq("sku", skuCandidate)
           .maybeSingle();
         if (bySku) productId = bySku.id;
+      }
 
-        // 2) fallback: name match
-        if (!productId) {
-          const { data: byName } = await db
-            .from("products")
-            .select("id")
-            .eq("name", item.product_name)
-            .maybeSingle();
-          if (byName) productId = byName.id;
-        }
+      // 2) Fallback: explicit product_id stored on the order line.
+      if (!productId && item.product_id) {
+        productId = item.product_id;
+      }
+
+      // 3) Fallback: exact product name match.
+      if (!productId && skuCandidate) {
+        const { data: byName } = await db
+          .from("products")
+          .select("id")
+          .eq("name", skuCandidate)
+          .maybeSingle();
+        if (byName) productId = byName.id;
       }
 
       if (!productId) {
-        stockErrors.push(`No product found for "${item.product_name}"`);
+        stockErrors.push(`No product found for SKU/name "${item.product_name}"`);
         continue;
       }
 
