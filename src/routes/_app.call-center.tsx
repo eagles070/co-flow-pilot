@@ -265,7 +265,7 @@ function CallCenterPage() {
               <p className="text-sm">No orders waiting.</p>
             </CardContent>
           ) : (
-            <>
+            <div key={current.id} className="animate-in fade-in-50 duration-200">
               <CardHeader className="border-b">
                 <div className="flex items-start justify-between gap-3">
                   <div>
