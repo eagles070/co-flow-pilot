@@ -103,12 +103,14 @@ function CallCenterPage() {
   const timerRef = useRef<number | null>(null);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Initial setup: max attempts + stores list (for edit dialog)
+  // Initial setup: max attempts + stores list (for edit dialog) + dynamic statuses
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "nrp_max_attempts").maybeSingle()
       .then(({ data }) => { if (data?.value) setMaxAttempts(Number(data.value) || 3); });
     supabase.from("stores").select("id, name").eq("is_active", true).order("name")
       .then(({ data }) => setStores((data ?? []) as StoreOpt[]));
+    supabase.from("status_configs").select("key, label, color").eq("is_active", true).order("sort_order")
+      .then(({ data }) => setStatuses((data ?? []) as StatusOpt[]));
   }, []);
 
   // Count pending orders for the start screen badge
