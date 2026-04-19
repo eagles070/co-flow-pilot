@@ -50,7 +50,9 @@ export function buildAmeexParcelForm({
 
   form.append("type", "SIMPLE");
   form.append("order_num", order.reference);
-  form.append("replace", "true");
+  // "replace": "false" => brand new parcel (NOUVEAU COLIS).
+  // "true" was tagging every parcel as ÉCHANGE (exchange) on Ameex.
+  form.append("replace", "false");
   form.append("open", "YES");
   form.append("try", "NO");
   form.append("fragile", "0");
