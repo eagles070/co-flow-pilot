@@ -171,6 +171,7 @@ export type Database = {
       }
       cities: {
         Row: {
+          ameex_city_id: string | null
           created_at: string
           delivery_cost: number
           id: string
@@ -180,6 +181,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ameex_city_id?: string | null
           created_at?: string
           delivery_cost?: number
           id?: string
@@ -189,6 +191,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ameex_city_id?: string | null
           created_at?: string
           delivery_cost?: number
           id?: string
