@@ -21,6 +21,7 @@ import {
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 import { HistoriqueTab } from "@/components/call-center/HistoriqueTab";
 import type { StatusOpt } from "@/components/call-center/ChangeStatusDialog";
+import { confirmOrderAndShip } from "@/utils/call-center.functions";
 
 // Lightweight WebAudio beep — no asset dependency
 function playBeep(kind: "success" | "error") {
