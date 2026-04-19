@@ -31,12 +31,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Listener FIRST
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
         // defer to avoid deadlock
         setTimeout(() => loadRoles(sess.user.id), 0);
+        if (event === "SIGNED_IN") {
+          setTimeout(() => {
+            supabase
+              .from("profiles")
+              .update({ last_login_at: new Date().toISOString() })
+              .eq("id", sess.user.id)
+              .then(() => {});
+          }, 0);
+        }
       } else {
         setRoles([]);
       }
