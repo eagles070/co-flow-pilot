@@ -12,6 +12,7 @@ export function OverviewTab() {
   const [stats, setStats] = useState({
     revenue: 0,
     expenses: 0,
+    shippingCost: 0,
     cashIn: 0,
     cashOut: 0,
     deliveredCount: 0,
@@ -21,7 +22,7 @@ export function OverviewTab() {
 
   const load = async () => {
     setLoading(true);
-    let oQuery = supabase.from("orders").select("status,total_amount,delivered_at,created_at");
+    let oQuery = supabase.from("orders").select("status,total_amount,city,delivered_at,created_at");
     let eQuery = supabase.from("expenses").select("amount,expense_date");
     let cQuery = supabase.from("cash_flow").select("type,amount,occurred_at");
     if (from) {
@@ -34,17 +35,45 @@ export function OverviewTab() {
       eQuery = eQuery.lte("expense_date", to);
       cQuery = cQuery.lte("occurred_at", to);
     }
-    const [{ data: orders }, { data: expenses }, { data: cash }] = await Promise.all([
-      oQuery, eQuery, cQuery,
-    ]);
+    const [{ data: orders }, { data: expenses }, { data: cash }, { data: cities }] =
+      await Promise.all([
+        oQuery,
+        eQuery,
+        cQuery,
+        supabase.from("cities").select("name,delivery_cost,return_cost"),
+      ]);
+
+    // Build city price map (case-insensitive)
+    const cityMap = new Map<string, { delivery: number; refused: number }>();
+    (cities ?? []).forEach((c) => {
+      cityMap.set((c.name ?? "").trim().toLowerCase(), {
+        delivery: Number(c.delivery_cost ?? 0),
+        refused: Number(c.return_cost ?? 0),
+      });
+    });
+    const priceFor = (city: string | null) =>
+      cityMap.get((city ?? "").trim().toLowerCase()) ?? { delivery: 0, refused: 0 };
+
     const o = orders ?? [];
-    const revenue = o.filter((x) => x.status === "delivered").reduce((s, x) => s + Number(x.total_amount), 0);
+    const revenue = o
+      .filter((x) => x.status === "delivered")
+      .reduce((s, x) => s + Number(x.total_amount), 0);
+
+    // Internal shipping cost from city table
+    let shippingCost = 0;
+    for (const x of o) {
+      const p = priceFor(x.city);
+      if (x.status === "delivered") shippingCost += p.delivery;
+      else if (x.status === "refused" || x.status === "returned") shippingCost += p.refused;
+    }
+
     const exp = (expenses ?? []).reduce((s, x) => s + Number(x.amount), 0);
     const cashIn = (cash ?? []).filter((x) => x.type === "in").reduce((s, x) => s + Number(x.amount), 0);
     const cashOut = (cash ?? []).filter((x) => x.type === "out").reduce((s, x) => s + Number(x.amount), 0);
     setStats({
       revenue,
       expenses: exp,
+      shippingCost,
       cashIn,
       cashOut,
       deliveredCount: o.filter((x) => x.status === "delivered").length,
@@ -56,7 +85,8 @@ export function OverviewTab() {
 
   useEffect(() => { load(); }, [from, to]);
 
-  const profit = stats.revenue - stats.expenses;
+  const totalCosts = stats.expenses + stats.shippingCost;
+  const profit = stats.revenue - totalCosts;
   const balance = stats.cashIn - stats.cashOut;
   const margin = stats.revenue > 0 ? (profit / stats.revenue) * 100 : 0;
   const returnRate = stats.totalOrders > 0 ? (stats.returnedCount / stats.totalOrders) * 100 : 0;
@@ -64,7 +94,7 @@ export function OverviewTab() {
   const alerts: { kind: "warn" | "danger"; msg: string }[] = [];
   if (stats.revenue > 0 && margin < 10) alerts.push({ kind: "warn", msg: `Low profit margin: ${margin.toFixed(1)}%` });
   if (returnRate > 20) alerts.push({ kind: "danger", msg: `High return rate: ${returnRate.toFixed(1)}%` });
-  if (stats.expenses > stats.revenue && stats.revenue > 0) alerts.push({ kind: "danger", msg: "Expenses exceed revenue" });
+  if (totalCosts > stats.revenue && stats.revenue > 0) alerts.push({ kind: "danger", msg: "Costs exceed revenue" });
 
   return (
     <div className="space-y-6">
@@ -95,13 +125,15 @@ export function OverviewTab() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Kpi label="Revenue" value={stats.revenue} />
-          <Kpi label="Total expenses" value={stats.expenses} />
+          <Kpi label="Expenses" value={stats.expenses} />
+          <Kpi label="Shipping (internal)" value={stats.shippingCost} tone="warn" />
           <Kpi label="Net profit" value={profit} tone={profit >= 0 ? "good" : "bad"} />
           <Kpi label="Margin" value={margin} suffix="%" tone={margin >= 15 ? "good" : margin >= 0 ? "warn" : "bad"} />
           <Kpi label="Cash in" value={stats.cashIn} tone="good" />
           <Kpi label="Cash out" value={stats.cashOut} tone="bad" />
           <Kpi label="Balance" value={balance} tone={balance >= 0 ? "good" : "bad"} />
           <Kpi label="Delivered orders" value={stats.deliveredCount} raw />
+          <Kpi label="Returned / refused" value={stats.returnedCount} raw />
         </div>
       )}
     </div>
