@@ -585,6 +585,8 @@ function DeliveryTab({
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  const testMut = useMutation({
     mutationFn: (id: string) => test({ data: { id } }),
     onSuccess: (r: any) => {
       const status = r?.http_status;
