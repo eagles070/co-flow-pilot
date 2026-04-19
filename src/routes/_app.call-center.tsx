@@ -14,8 +14,32 @@ import { toast } from "sonner";
 import {
   PhoneCall, CheckCircle2, XCircle, PhoneOff, Clock, RotateCcw, ChevronRight,
   AlertTriangle, MapPin, Package as PackageIcon, Copy, MessageCircle, History,
-  Keyboard, Repeat, Timer,
+  Keyboard, Repeat, Timer, Loader2,
 } from "lucide-react";
+
+// Lightweight WebAudio beep — no asset dependency
+function playBeep(kind: "success" | "error") {
+  try {
+    const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine";
+    if (kind === "success") {
+      o.frequency.setValueAtTime(660, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(990, ctx.currentTime + 0.12);
+    } else {
+      o.frequency.setValueAtTime(300, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.18);
+    }
+    g.gain.setValueAtTime(0.08, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+    o.start(); o.stop(ctx.currentTime + 0.24);
+    setTimeout(() => ctx.close(), 300);
+  } catch { /* ignore */ }
+}
 import type { OrderSource, OrderStatus } from "@/lib/order-status";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +87,7 @@ function CallCenterPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
+  const noteRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Load max attempts setting
   useEffect(() => {
@@ -78,6 +103,14 @@ function CallCenterPage() {
       timerRef.current = window.setInterval(() => setCallSeconds((s) => s + 1), 1000);
     }
     return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
+  }, [current?.id]);
+
+  // Auto-focus note input when an order loads
+  useEffect(() => {
+    if (current && noteRef.current) {
+      const t = window.setTimeout(() => noteRef.current?.focus(), 120);
+      return () => window.clearTimeout(t);
+    }
   }, [current?.id]);
 
   const loadOrder = useCallback(async (o: QueueOrder) => {
@@ -132,7 +165,8 @@ function CallCenterPage() {
       }),
     ]);
     setSaving(false);
-    if (oe || ce) { toast.error(oe?.message || ce?.message || "Save failed"); return; }
+    if (oe || ce) { playBeep("error"); toast.error(oe?.message || ce?.message || "Save failed"); return; }
+    playBeep(outcome === "confirmed" ? "success" : "error");
     toast.success("Saved — loading next");
     const next = remaining[0] ?? null;
     setQueue((prev) => prev.filter((o) => o.id !== current.id));
@@ -191,6 +225,20 @@ function CallCenterPage() {
     : current.attempts === 2 ? "bg-yellow-500 text-white"
     : "bg-muted text-foreground"
     : "";
+  const timerColor = callSeconds >= 60 ? "border-destructive text-destructive"
+    : callSeconds >= 30 ? "border-yellow-500 text-yellow-600 dark:text-yellow-400"
+    : "";
+  // Smart NRP labelling
+  const nrpLabel = current
+    ? (current.attempts + 1) >= maxAttempts ? "Last attempt"
+    : current.attempts >= 1 ? `NRP — Retry ${current.attempts}`
+    : null
+    : null;
+  const nrpTone = current && current.attempts >= 2
+    ? "bg-destructive text-destructive-foreground"
+    : current && current.attempts === 1
+    ? "bg-yellow-500 text-white"
+    : "";
 
   return (
     <div>
@@ -199,11 +247,11 @@ function CallCenterPage() {
         description={`${queue.length} order(s) in your queue · Max attempts: ${maxAttempts}`}
         actions={
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1.5 font-mono text-sm">
+            <Badge variant="outline" className={cn("gap-1.5 font-mono text-sm transition-colors", timerColor)}>
               <Timer className="h-3.5 w-3.5" />{fmtTimer(callSeconds)}
             </Badge>
             <Button variant="outline" size="sm" onClick={fetchQueue} disabled={loading}>
-              <RotateCcw className="mr-2 h-4 w-4" />Refresh
+              <RotateCcw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />Refresh
             </Button>
           </div>
         }
@@ -217,7 +265,7 @@ function CallCenterPage() {
               <p className="text-sm">No orders waiting.</p>
             </CardContent>
           ) : (
-            <>
+            <div key={current.id} className="animate-in fade-in-50 duration-200">
               <CardHeader className="border-b">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -233,9 +281,9 @@ function CallCenterPage() {
                           <Repeat className="h-3 w-3" />Repeat ×{repeatCount}
                         </Badge>
                       )}
-                      {current.attempts >= 2 && (
-                        <Badge className={cn("gap-1", current.attempts >= 3 ? "bg-destructive text-destructive-foreground" : "bg-yellow-500 text-white")}>
-                          <AlertTriangle className="h-3 w-3" />NRP {current.attempts}
+                      {nrpLabel && (
+                        <Badge className={cn("gap-1", nrpTone)}>
+                          <AlertTriangle className="h-3 w-3" />{nrpLabel}
                         </Badge>
                       )}
                     </div>
@@ -327,8 +375,9 @@ function CallCenterPage() {
                           <span className="font-medium">{(it.quantity * Number(it.unit_price)).toFixed(2)}</span>
                         </li>
                       ))}
-                      <li className="flex items-center justify-between bg-muted/20 p-3 text-sm font-semibold">
-                        <span>Total</span><span>{(itemsTotal || current.total_amount).toFixed(2)}</span>
+                      <li className="flex items-center justify-between bg-primary/5 p-3">
+                        <span className="text-sm font-semibold">Total</span>
+                        <span className="text-xl font-bold text-primary">{(itemsTotal || current.total_amount).toFixed(2)}</span>
                       </li>
                     </ul>
                   )}
@@ -345,7 +394,7 @@ function CallCenterPage() {
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Call note</Label>
-                    <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note about this call…" />
+                    <Textarea ref={noteRef} rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note about this call…" />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Recall at (optional)</Label>
@@ -356,13 +405,16 @@ function CallCenterPage() {
                 {/* Primary actions — large */}
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                   <Button onClick={() => finishAndNext("confirmed", "confirmed")} disabled={saving} size="lg" className="bg-emerald-600 hover:bg-emerald-700">
-                    <CheckCircle2 className="mr-2 h-5 w-5" />Confirm <kbd className="ml-2 rounded bg-emerald-800/40 px-1.5 py-0.5 text-[10px]">⏎</kbd>
+                    {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
+                    Confirm <kbd className="ml-2 rounded bg-emerald-800/40 px-1.5 py-0.5 text-[10px]">⏎</kbd>
                   </Button>
                   <Button onClick={() => finishAndNext("no_reply", "no_reply")} disabled={saving} size="lg" variant="secondary">
-                    <PhoneOff className="mr-2 h-5 w-5" />No reply <kbd className="ml-2 rounded bg-muted-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>
+                    {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <PhoneOff className="mr-2 h-5 w-5" />}
+                    No reply <kbd className="ml-2 rounded bg-muted-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>
                   </Button>
                   <Button onClick={() => finishAndNext("postponed", "postponed")} disabled={saving} size="lg" variant="secondary">
-                    <Clock className="mr-2 h-5 w-5" />Postpone <kbd className="ml-2 rounded bg-muted-foreground/20 px-1.5 py-0.5 text-[10px]">P</kbd>
+                    {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Clock className="mr-2 h-5 w-5" />}
+                    Postpone <kbd className="ml-2 rounded bg-muted-foreground/20 px-1.5 py-0.5 text-[10px]">P</kbd>
                   </Button>
                 </div>
                 {/* Secondary actions */}
@@ -383,7 +435,7 @@ function CallCenterPage() {
                   <Keyboard className="h-3 w-3" />Shortcuts: Enter Confirm · N No reply · P Postpone · C Cancel · S Skip
                 </div>
               </CardContent>
-            </>
+            </div>
           )}
         </Card>
 
@@ -394,7 +446,7 @@ function CallCenterPage() {
           </CardHeader>
           <CardContent className="max-h-[640px] overflow-y-auto p-0">
             {remaining.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">No more orders.</div>
+              <div className="p-6 text-center text-sm text-muted-foreground">No orders in queue.</div>
             ) : (
               <ul className="divide-y">
                 {remaining.slice(0, 30).map((o) => {
