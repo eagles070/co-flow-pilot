@@ -165,7 +165,8 @@ function CallCenterPage() {
       }),
     ]);
     setSaving(false);
-    if (oe || ce) { toast.error(oe?.message || ce?.message || "Save failed"); return; }
+    if (oe || ce) { playBeep("error"); toast.error(oe?.message || ce?.message || "Save failed"); return; }
+    playBeep(outcome === "confirmed" ? "success" : "error");
     toast.success("Saved — loading next");
     const next = remaining[0] ?? null;
     setQueue((prev) => prev.filter((o) => o.id !== current.id));
