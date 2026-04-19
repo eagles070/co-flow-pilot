@@ -491,6 +491,75 @@ export type Database = {
         }
         Relationships: []
       }
+      purchases: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          product_id: string
+          purchase_date: string
+          quantity: number
+          status: Database["public"]["Enums"]["purchase_status"]
+          stock_applied: boolean
+          supplier_id: string | null
+          total_cost: number
+          transport_type: Database["public"]["Enums"]["transport_type"]
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          product_id: string
+          purchase_date?: string
+          quantity: number
+          status?: Database["public"]["Enums"]["purchase_status"]
+          stock_applied?: boolean
+          supplier_id?: string | null
+          total_cost?: number
+          transport_type?: Database["public"]["Enums"]["transport_type"]
+          unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string
+          purchase_date?: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["purchase_status"]
+          stock_applied?: boolean
+          supplier_id?: string | null
+          total_cost?: number
+          transport_type?: Database["public"]["Enums"]["transport_type"]
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           created_at: string
@@ -719,6 +788,7 @@ export type Database = {
         | "returned"
         | "refused"
         | "postponed"
+      purchase_status: "ordered" | "in_transit" | "received"
       stock_movement_type:
         | "purchase"
         | "sale"
@@ -726,6 +796,7 @@ export type Database = {
         | "adjustment"
         | "damaged"
       store_type: "shopify" | "google_sheet" | "manual"
+      transport_type: "air" | "sea" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -908,6 +979,7 @@ export const Constants = {
         "refused",
         "postponed",
       ],
+      purchase_status: ["ordered", "in_transit", "received"],
       stock_movement_type: [
         "purchase",
         "sale",
@@ -916,6 +988,7 @@ export const Constants = {
         "damaged",
       ],
       store_type: ["shopify", "google_sheet", "manual"],
+      transport_type: ["air", "sea", "other"],
     },
   },
 } as const
