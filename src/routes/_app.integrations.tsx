@@ -46,6 +46,7 @@ import {
   updateDeliveryProvider,
   deleteDeliveryProvider,
   testDeliveryProvider,
+  fetchAmeexSenders,
 } from "@/utils/integrations.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -530,6 +531,23 @@ function DeliveryTab({
   const update = useServerFn(updateDeliveryProvider);
   const del = useServerFn(deleteDeliveryProvider);
   const test = useServerFn(testDeliveryProvider);
+  const fetchSenders = useServerFn(fetchAmeexSenders);
+  const [senders, setSenders] = useState<Array<{ id: string; label: string }>>([]);
+
+  const sendersMut = useMutation({
+    mutationFn: () => fetchSenders({ data: { id: editId! } }),
+    onSuccess: (r: any) => {
+      setSenders(r?.senders ?? []);
+      if (!r?.senders?.length) {
+        toast.error(
+          "Couldn't auto-fetch senders. Open Ameex dashboard and copy the exact sender ID.",
+        );
+      } else {
+        toast.success(`Found ${r.senders.length} sender(s) — pick one below.`);
+      }
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const openEdit = (p: any) => {
     setEditId(p.id);
@@ -779,14 +797,44 @@ function DeliveryTab({
               <Input value={editApiKey} onChange={(e) => setEditApiKey(e.target.value)} />
             </div>
             <div>
-              <Label>Sender / Expéditeur ID</Label>
+              <div className="flex items-center justify-between">
+                <Label>Sender / Expéditeur ID</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => sendersMut.mutate()}
+                  disabled={sendersMut.isPending || !editId}
+                >
+                  {sendersMut.isPending ? "Fetching…" : "Fetch from Ameex"}
+                </Button>
+              </div>
+              {senders.length > 0 && (
+                <Select
+                  value={editBusinessId}
+                  onValueChange={(v) => setEditBusinessId(v)}
+                >
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Pick a sender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {senders.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Input
+                className="mt-2"
                 value={editBusinessId}
                 onChange={(e) => setEditBusinessId(e.target.value)}
-                placeholder="2"
+                placeholder="e.g. 2"
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Required by Ameex to choose the sender account.
+                Click "Fetch from Ameex" to load valid sender IDs from your account, or paste
+                the exact ID copied from the Ameex dashboard.
               </p>
             </div>
             <div>
