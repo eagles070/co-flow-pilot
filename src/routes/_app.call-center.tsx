@@ -225,6 +225,20 @@ function CallCenterPage() {
     : current.attempts === 2 ? "bg-yellow-500 text-white"
     : "bg-muted text-foreground"
     : "";
+  const timerColor = callSeconds >= 60 ? "border-destructive text-destructive"
+    : callSeconds >= 30 ? "border-yellow-500 text-yellow-600 dark:text-yellow-400"
+    : "";
+  // Smart NRP labelling
+  const nrpLabel = current
+    ? (current.attempts + 1) >= maxAttempts ? "Last attempt"
+    : current.attempts >= 1 ? `NRP — Retry ${current.attempts}`
+    : null
+    : null;
+  const nrpTone = current && current.attempts >= 2
+    ? "bg-destructive text-destructive-foreground"
+    : current && current.attempts === 1
+    ? "bg-yellow-500 text-white"
+    : "";
 
   return (
     <div>
