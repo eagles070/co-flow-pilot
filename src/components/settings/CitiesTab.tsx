@@ -140,7 +140,12 @@ export function CitiesTab({ isAdmin }: Props) {
       });
     }
     if (!inserts.length) return toast.error("No rows parsed");
-    const { error } = await supabase.from("cities").upsert(inserts, { onConflict: "name" });
+    // Deduplicate by name (case-insensitive), keep last occurrence — avoids
+    // Postgres "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const dedupMap = new Map<string, { name: string; delivery_cost: number; return_cost: number }>();
+    for (const row of inserts) dedupMap.set(row.name.toLowerCase(), row);
+    const deduped = Array.from(dedupMap.values());
+    const { error } = await supabase.from("cities").upsert(deduped, { onConflict: "name" });
     if (error) return toast.error(error.message);
     toast.success(`Imported ${inserts.length} cities`);
     if (fileRef.current) fileRef.current.value = "";
