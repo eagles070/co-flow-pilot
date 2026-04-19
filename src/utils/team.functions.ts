@@ -84,7 +84,13 @@ export const adminUpdateUser = createServerFn({ method: "POST" })
       throw new Error("You cannot change your own role.");
     }
 
-    const profilePatch: Record<string, unknown> = {};
+    const profilePatch: {
+      full_name?: string;
+      phone?: string | null;
+      is_active?: boolean;
+      max_orders_per_day?: number;
+      max_concurrent_orders?: number;
+    } = {};
     if (data.full_name !== undefined) profilePatch.full_name = data.full_name;
     if (data.phone !== undefined) profilePatch.phone = data.phone;
     if (data.is_active !== undefined) profilePatch.is_active = data.is_active;
