@@ -63,9 +63,11 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       const productId = matchedProduct?.id ?? null;
 
       ameexItems.push({
-        product_name: item.product_name,
+        // Send the real product NAME to Ameex (not the SKU) so the parcel
+        // label stays human-readable. Ameex deducts warehouse stock on
+        // their side using their own product → SKU mapping.
+        product_name: matchedProduct?.name || item.product_name,
         quantity: item.quantity,
-        sku: matchedProduct?.sku ?? null,
       });
 
       if (!productId) {
