@@ -178,6 +178,7 @@ export type Database = {
           notes: string | null
           order_id: string
           picked_up_at: string | null
+          provider_id: string | null
           return_cost: number
           returned_at: string | null
           shipping_cost: number
@@ -193,6 +194,7 @@ export type Database = {
           notes?: string | null
           order_id: string
           picked_up_at?: string | null
+          provider_id?: string | null
           return_cost?: number
           returned_at?: string | null
           shipping_cost?: number
@@ -208,6 +210,7 @@ export type Database = {
           notes?: string | null
           order_id?: string
           picked_up_at?: string | null
+          provider_id?: string | null
           return_cost?: number
           returned_at?: string | null
           shipping_cost?: number
@@ -223,7 +226,62 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "deliveries_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_providers"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      delivery_providers: {
+        Row: {
+          api_id: string
+          api_key: string
+          base_url: string
+          business_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          last_sync_at: string | null
+          name: string
+          provider_type: string
+          status: string
+          updated_at: string
+          webhook_token: string
+        }
+        Insert: {
+          api_id: string
+          api_key: string
+          base_url?: string
+          business_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_sync_at?: string | null
+          name: string
+          provider_type?: string
+          status?: string
+          updated_at?: string
+          webhook_token: string
+        }
+        Update: {
+          api_id?: string
+          api_key?: string
+          base_url?: string
+          business_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_sync_at?: string | null
+          name?: string
+          provider_type?: string
+          status?: string
+          updated_at?: string
+          webhook_token?: string
+        }
+        Relationships: []
       }
       expenses: {
         Row: {
@@ -275,6 +333,110 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      google_sheets_integrations: {
+        Row: {
+          access_token: string | null
+          column_mapping: Json
+          created_at: string
+          created_by: string | null
+          direction: string
+          google_email: string | null
+          id: string
+          last_sync_at: string | null
+          name: string
+          refresh_token: string | null
+          sheet_name: string
+          spreadsheet_id: string
+          status: string
+          store_id: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          column_mapping?: Json
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          google_email?: string | null
+          id?: string
+          last_sync_at?: string | null
+          name: string
+          refresh_token?: string | null
+          sheet_name?: string
+          spreadsheet_id: string
+          status?: string
+          store_id?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          column_mapping?: Json
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          google_email?: string | null
+          id?: string
+          last_sync_at?: string | null
+          name?: string
+          refresh_token?: string | null
+          sheet_name?: string
+          spreadsheet_id?: string
+          status?: string
+          store_id?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_sheets_integrations_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_logs: {
+        Row: {
+          created_at: string
+          direction: string
+          endpoint: string | null
+          error: string | null
+          http_status: number | null
+          id: string
+          payload: Json | null
+          provider_id: string | null
+          provider_type: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          endpoint?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          payload?: Json | null
+          provider_id?: string | null
+          provider_type: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          endpoint?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          payload?: Json | null
+          provider_id?: string | null
+          provider_type?: string
+          status?: string
+        }
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -627,6 +789,53 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopify_stores: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          domain: string
+          id: string
+          last_sync_at: string | null
+          name: string
+          status: string
+          store_id: string | null
+          updated_at: string
+          webhook_secret: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          domain: string
+          id?: string
+          last_sync_at?: string | null
+          name: string
+          status?: string
+          store_id?: string | null
+          updated_at?: string
+          webhook_secret: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          domain?: string
+          id?: string
+          last_sync_at?: string | null
+          name?: string
+          status?: string
+          store_id?: string | null
+          updated_at?: string
+          webhook_secret?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopify_stores_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
