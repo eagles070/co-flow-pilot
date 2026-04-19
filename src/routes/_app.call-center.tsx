@@ -175,7 +175,7 @@ function CallCenterPage() {
     const o = list[0];
     setCurrent(o);
     setMode("active");
-    setNote(""); setRecallAt(""); setHistory([]);
+    setNote(""); setRecallAt(""); setHistory([]); setDropdownStatus("");
     // Side checks
     const [bl, rp] = await Promise.all([
       supabase.from("blacklist").select("phone").eq("phone", o.customer_phone).maybeSingle(),
