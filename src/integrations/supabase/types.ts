@@ -136,6 +136,39 @@ export type Database = {
           },
         ]
       }
+      cash_flow: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          occurred_at: string
+          source: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          occurred_at?: string
+          source: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          occurred_at?: string
+          source?: string
+          type?: string
+        }
+        Relationships: []
+      }
       deliveries: {
         Row: {
           carrier: string
@@ -201,6 +234,7 @@ export type Database = {
           description: string | null
           expense_date: string
           id: string
+          product_id: string | null
           store_id: string | null
         }
         Insert: {
@@ -211,6 +245,7 @@ export type Database = {
           description?: string | null
           expense_date?: string
           id?: string
+          product_id?: string | null
           store_id?: string | null
         }
         Update: {
@@ -221,9 +256,17 @@ export type Database = {
           description?: string | null
           expense_date?: string
           id?: string
+          product_id?: string | null
           store_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_store_id_fkey"
             columns: ["store_id"]
