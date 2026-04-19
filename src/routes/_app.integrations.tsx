@@ -744,6 +744,69 @@ function DeliveryTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit delivery provider</DialogTitle>
+            <DialogDescription>
+              Update credentials or sender ID. Changes apply immediately to new shipments.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Display name</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div>
+              <Label>Type</Label>
+              <Select value={editProviderType} onValueChange={setEditProviderType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ameex">Ameex</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>API ID</Label>
+              <Input value={editApiId} onChange={(e) => setEditApiId(e.target.value)} />
+            </div>
+            <div>
+              <Label>API Key</Label>
+              <Input value={editApiKey} onChange={(e) => setEditApiKey(e.target.value)} />
+            </div>
+            <div>
+              <Label>Sender / Expéditeur ID</Label>
+              <Input
+                value={editBusinessId}
+                onChange={(e) => setEditBusinessId(e.target.value)}
+                placeholder="2"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Required by Ameex to choose the sender account.
+              </p>
+            </div>
+            <div>
+              <Label>Base URL</Label>
+              <Input value={editBaseApi} onChange={(e) => setEditBaseApi(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateMut.mutate()}
+              disabled={updateMut.isPending || !editId}
+            >
+              {updateMut.isPending ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
