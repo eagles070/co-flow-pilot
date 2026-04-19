@@ -1,5 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  buildAmeexParcelForm,
+  findAmeexTracking,
+  getAmeexErrorMessage,
+  isAmeexSuccessResponse,
+  parseAmeexResponse,
+} from "@/utils/ameex";
 
 type Role = "admin" | "moderator" | "agent" | "media_buyer";
 
@@ -419,22 +426,7 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
     if (!provider) throw new Error("Provider not found");
 
     const items = (order.order_items as any[]) ?? [];
-    const productName = items.map((i) => `${i.product_name} x${i.quantity}`).join(", ") || "Order";
-
-    const form = new FormData();
-    form.append("type", "SIMPLE");
-    form.append("order_num", order.reference);
-    form.append("replace", "true");
-    form.append("open", "YES");
-    form.append("try", "NO");
-    form.append("fragile", "0");
-    form.append("receiver", order.customer_name);
-    form.append("phone", order.customer_phone);
-    form.append("city", order.city || "1");
-    form.append("address", order.shipping_address || "N/A");
-    form.append("comment", order.notes || "");
-    form.append("product", productName);
-    form.append("cod", String(order.total_amount));
+    const form = buildAmeexParcelForm({ order, items, provider });
 
     const url = `${provider.base_url}/customer/Delivery/Parcels/Action/Type/Add`;
     const res = await fetch(url, {
@@ -443,15 +435,14 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
       body: form,
     });
     const text = await res.text();
-    let parsed: any;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = { raw: text };
-    }
-
-    const trackingNumber =
-      parsed?.code || parsed?.parcel_code || parsed?.CODE || parsed?.data?.code || null;
+    const parsed = parseAmeexResponse(text);
+    const trackingNumber = findAmeexTracking(parsed);
+    const rawAmeexError = getAmeexErrorMessage(parsed);
+    const ameexError =
+      rawAmeexError?.includes("CRBT") && Number(order.total_amount) <= 0
+        ? "Ameex requires a positive order amount before creating a parcel. Update the order total, then retry."
+        : rawAmeexError;
+    const ameexSuccess = isAmeexSuccessResponse(parsed);
 
     await logIntegration(db, {
       provider_type: "delivery",
@@ -459,12 +450,13 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
       direction: "outgoing",
       endpoint: url,
       http_status: res.status,
-      status: res.ok ? "success" : "error",
+      status: res.ok && ameexSuccess && !!trackingNumber ? "success" : "error",
       payload: { request: { order_id: order.id }, response: parsed },
-      error: res.ok ? undefined : `HTTP ${res.status}`,
+      error: res.ok ? (ameexSuccess && trackingNumber ? undefined : ameexError || "No tracking number returned") : `HTTP ${res.status}`,
     });
 
     if (!res.ok) throw new Error(`Ameex error: HTTP ${res.status}`);
+    if (!ameexSuccess) throw new Error(ameexError || "Ameex rejected the parcel request");
 
     if (trackingNumber) {
       await db.from("deliveries").upsert(
