@@ -30,6 +30,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Patch fetch ONCE to inject Supabase auth header on server function calls
+    if (typeof window !== "undefined" && !(window as any).__lovableFetchPatched) {
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+        try {
+          const url =
+            typeof input === "string"
+              ? input
+              : input instanceof URL
+                ? input.toString()
+                : input.url;
+          if (url.includes("/_serverFn/")) {
+            const { data } = await supabase.auth.getSession();
+            const token = data.session?.access_token;
+            if (token) {
+              const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
+              if (!headers.has("authorization")) {
+                headers.set("authorization", `Bearer ${token}`);
+              }
+              init = { ...(init || {}), headers };
+            }
+          }
+        } catch {
+          // ignore — fall through to original fetch
+        }
+        return originalFetch(input as any, init);
+      };
+      (window as any).__lovableFetchPatched = true;
+    }
+
     // Listener FIRST
     const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess);
