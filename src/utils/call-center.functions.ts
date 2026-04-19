@@ -7,6 +7,7 @@ import {
   isAmeexSuccessResponse,
   parseAmeexResponse,
 } from "@/utils/ameex";
+import { resolveProductForOrderItem } from "@/utils/call-center.helpers";
 
 /**
  * Confirm an order:
@@ -48,39 +49,24 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       unit_price: number;
     }>) ?? [];
 
-    // 2) Stock deduction (by SKU → product_id → product_name)
+    // 2) Stock deduction + prepare Ameex product labels from our SKU
     const stockErrors: string[] = [];
     const stockApplied: string[] = [];
+    const ameexItems = [] as Array<{
+      product_name: string;
+      quantity: number;
+      sku?: string | null;
+    }>;
 
     for (const item of items) {
-      let productId: string | null = null;
+      const matchedProduct = await resolveProductForOrderItem(db, item);
+      const productId = matchedProduct?.id ?? null;
 
-      // 1) Prefer SKU match (the SKU entered on the product in Products/Stock page).
-      //    `product_name` from order_items often holds the SKU typed by the agent.
-      const skuCandidate = item.product_name?.trim();
-      if (skuCandidate) {
-        const { data: bySku } = await db
-          .from("products")
-          .select("id")
-          .eq("sku", skuCandidate)
-          .maybeSingle();
-        if (bySku) productId = bySku.id;
-      }
-
-      // 2) Fallback: explicit product_id stored on the order line.
-      if (!productId && item.product_id) {
-        productId = item.product_id;
-      }
-
-      // 3) Fallback: exact product name match.
-      if (!productId && skuCandidate) {
-        const { data: byName } = await db
-          .from("products")
-          .select("id")
-          .eq("name", skuCandidate)
-          .maybeSingle();
-        if (byName) productId = byName.id;
-      }
+      ameexItems.push({
+        product_name: item.product_name,
+        quantity: item.quantity,
+        sku: matchedProduct?.sku ?? null,
+      });
 
       if (!productId) {
         stockErrors.push(`No product found for SKU/name "${item.product_name}"`);
@@ -100,7 +86,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       if (smErr) {
         stockErrors.push(`Stock for "${item.product_name}": ${smErr.message}`);
       } else {
-        stockApplied.push(item.product_name);
+        stockApplied.push(matchedProduct?.sku?.trim() || item.product_name);
       }
     }
 
@@ -160,7 +146,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     // 5) Push to Ameex
     const form = buildAmeexParcelForm({
       order: { ...order, ameex_city_id: ameexCityId } as any,
-      items,
+      items: ameexItems,
       provider,
     });
 
@@ -208,7 +194,13 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       endpoint: url,
       http_status: res.status,
       status: res.ok && ameexSuccess && trackingNumber ? "success" : "error",
-      payload: { request: { order_id: order.id }, response: parsed },
+      payload: {
+        request: {
+          order_id: order.id,
+          items: ameexItems,
+        },
+        response: parsed,
+      },
       error: res.ok ? (ameexSuccess && trackingNumber ? null : ameexError || "No tracking number returned") : `HTTP ${res.status}`,
     });
 

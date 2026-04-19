@@ -1,6 +1,7 @@
 type AmeexItem = {
   product_name: string;
   quantity: number;
+  sku?: string | null;
 };
 
 type AmeexOrder = {
@@ -26,6 +27,11 @@ function normalizeAmount(value: number | string) {
   return Math.max(0, amount);
 }
 
+function getAmeexItemLabel(item: AmeexItem) {
+  const sku = item.sku?.trim();
+  return sku || item.product_name;
+}
+
 export function getAmeexBusinessId(provider: AmeexProvider): string | null {
   const businessId = provider.business_id?.trim();
   if (businessId) return businessId;
@@ -44,7 +50,7 @@ export function buildAmeexParcelForm({
   provider: AmeexProvider;
 }) {
   const form = new FormData();
-  const productLabel = items.map((item) => `${item.product_name} x${item.quantity}`).join(", ") || "Order";
+  const productLabel = items.map((item) => `${getAmeexItemLabel(item)} x${item.quantity}`).join(", ") || "Order";
   const businessId = getAmeexBusinessId(provider);
   const codAmount = normalizeAmount(order.total_amount);
 
