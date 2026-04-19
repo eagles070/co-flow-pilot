@@ -150,6 +150,7 @@ function CallCenterPage() {
     setNote("");
     setRecallAt("");
     setHistory([]);
+    setDropdownStatus("");
     refreshPendingCount();
   }, [refreshPendingCount]);
 
