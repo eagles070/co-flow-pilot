@@ -19,6 +19,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppProductsRouteImport } from './routes/_app.products'
 import { Route as AppOrdersRouteImport } from './routes/_app.orders'
 import { Route as AppLogsRouteImport } from './routes/_app.logs'
+import { Route as AppInventoryRouteImport } from './routes/_app.inventory'
 import { Route as AppIntegrationsRouteImport } from './routes/_app.integrations'
 import { Route as AppFinanceRouteImport } from './routes/_app.finance'
 import { Route as AppDeliveryRouteImport } from './routes/_app.delivery'
@@ -74,6 +75,11 @@ const AppLogsRoute = AppLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => AppRoute,
 } as any)
+const AppInventoryRoute = AppInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
   id: '/integrations',
   path: '/integrations',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/delivery': typeof AppDeliveryRoute
   '/finance': typeof AppFinanceRoute
   '/integrations': typeof AppIntegrationsRoute
+  '/inventory': typeof AppInventoryRoute
   '/logs': typeof AppLogsRoute
   '/orders': typeof AppOrdersRoute
   '/products': typeof AppProductsRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/delivery': typeof AppDeliveryRoute
   '/finance': typeof AppFinanceRoute
   '/integrations': typeof AppIntegrationsRoute
+  '/inventory': typeof AppInventoryRoute
   '/logs': typeof AppLogsRoute
   '/orders': typeof AppOrdersRoute
   '/products': typeof AppProductsRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_app/delivery': typeof AppDeliveryRoute
   '/_app/finance': typeof AppFinanceRoute
   '/_app/integrations': typeof AppIntegrationsRoute
+  '/_app/inventory': typeof AppInventoryRoute
   '/_app/logs': typeof AppLogsRoute
   '/_app/orders': typeof AppOrdersRoute
   '/_app/products': typeof AppProductsRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/delivery'
     | '/finance'
     | '/integrations'
+    | '/inventory'
     | '/logs'
     | '/orders'
     | '/products'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/delivery'
     | '/finance'
     | '/integrations'
+    | '/inventory'
     | '/logs'
     | '/orders'
     | '/products'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/_app/delivery'
     | '/_app/finance'
     | '/_app/integrations'
+    | '/_app/inventory'
     | '/_app/logs'
     | '/_app/orders'
     | '/_app/products'
@@ -279,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLogsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/inventory': {
+      id: '/_app/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof AppInventoryRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/integrations': {
       id: '/_app/integrations'
       path: '/integrations'
@@ -323,6 +342,7 @@ interface AppRouteChildren {
   AppDeliveryRoute: typeof AppDeliveryRoute
   AppFinanceRoute: typeof AppFinanceRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
+  AppInventoryRoute: typeof AppInventoryRoute
   AppLogsRoute: typeof AppLogsRoute
   AppOrdersRoute: typeof AppOrdersRoute
   AppProductsRoute: typeof AppProductsRoute
@@ -339,6 +359,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDeliveryRoute: AppDeliveryRoute,
   AppFinanceRoute: AppFinanceRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
+  AppInventoryRoute: AppInventoryRoute,
   AppLogsRoute: AppLogsRoute,
   AppOrdersRoute: AppOrdersRoute,
   AppProductsRoute: AppProductsRoute,
@@ -358,3 +379,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
