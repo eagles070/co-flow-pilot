@@ -1,6 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  LayoutDashboard, ShoppingBag, PhoneCall, Truck, Package, BarChart3,
+  LayoutDashboard, ShoppingBag, PhoneCall, Truck, Package,
   Factory, Users, UserCog, Plug, Wallet, Settings, ShieldAlert, FileClock,
   Moon, Sun, LogOut, Boxes, ChevronLeft, ChevronRight,
 } from "lucide-react";
@@ -28,8 +28,7 @@ const NAV: NavItem[] = [
   { to: "/orders", label: "Orders", icon: ShoppingBag, group: "ops" },
   { to: "/call-center", label: "Call Center", icon: PhoneCall, group: "ops" },
   { to: "/delivery", label: "Delivery", icon: Truck, group: "ops" },
-  { to: "/inventory", label: "Inventory", icon: Package, group: "ops" },
-  { to: "/products", label: "Product Analytics", icon: BarChart3, group: "biz" },
+  { to: "/products", label: "Products & Stock", icon: Package, group: "ops" },
   { to: "/sourcing", label: "Sourcing", icon: Factory, group: "biz", roles: ["admin", "moderator"] },
   { to: "/finance", label: "Finance", icon: Wallet, group: "biz", roles: ["admin", "moderator", "media_buyer"] },
   { to: "/team", label: "Team", icon: Users, group: "admin", roles: ["admin", "moderator"] },
