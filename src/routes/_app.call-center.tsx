@@ -14,8 +14,32 @@ import { toast } from "sonner";
 import {
   PhoneCall, CheckCircle2, XCircle, PhoneOff, Clock, RotateCcw, ChevronRight,
   AlertTriangle, MapPin, Package as PackageIcon, Copy, MessageCircle, History,
-  Keyboard, Repeat, Timer,
+  Keyboard, Repeat, Timer, Loader2,
 } from "lucide-react";
+
+// Lightweight WebAudio beep — no asset dependency
+function playBeep(kind: "success" | "error") {
+  try {
+    const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine";
+    if (kind === "success") {
+      o.frequency.setValueAtTime(660, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(990, ctx.currentTime + 0.12);
+    } else {
+      o.frequency.setValueAtTime(300, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.18);
+    }
+    g.gain.setValueAtTime(0.08, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+    o.start(); o.stop(ctx.currentTime + 0.24);
+    setTimeout(() => ctx.close(), 300);
+  } catch { /* ignore */ }
+}
 import type { OrderSource, OrderStatus } from "@/lib/order-status";
 import { cn } from "@/lib/utils";
 
