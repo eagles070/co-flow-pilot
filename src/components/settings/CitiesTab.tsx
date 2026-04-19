@@ -219,11 +219,22 @@ export function CitiesTab({ isAdmin }: Props) {
     const rIdx = ["refused_price", "return_cost", "return_price"]
       .map((h) => headers.indexOf(h))
       .find((i) => i >= 0) ?? -1;
+    const aIdx = ["ameex_city_id", "ameex_id", "city_id"]
+      .map((h) => headers.indexOf(h))
+      .find((i) => i >= 0) ?? -1;
 
     if (nameIdx < 0)
-      return toast.error("Header missing. Expected: city_name,delivery_price,refused_price");
+      return toast.error(
+        "Header missing. Expected: city_name,ameex_city_id,delivery_price,refused_price",
+      );
 
-    const inserts: { name: string; delivery_cost: number; return_cost: number }[] = [];
+    type ImportRow = {
+      name: string;
+      delivery_cost: number;
+      return_cost: number;
+      ameex_city_id: string | null;
+    };
+    const inserts: ImportRow[] = [];
     for (const line of lines.slice(1)) {
       const cols = line.split(/[,;\t]/).map((c) => c.trim());
       const name = cols[nameIdx];
@@ -232,10 +243,11 @@ export function CitiesTab({ isAdmin }: Props) {
         name,
         delivery_cost: dIdx >= 0 ? Number(cols[dIdx]) || 0 : 0,
         return_cost: rIdx >= 0 ? Number(cols[rIdx]) || 0 : 0,
+        ameex_city_id: aIdx >= 0 && cols[aIdx] ? cols[aIdx] : null,
       });
     }
     if (!inserts.length) return toast.error("No rows parsed");
-    const dedupMap = new Map<string, { name: string; delivery_cost: number; return_cost: number }>();
+    const dedupMap = new Map<string, ImportRow>();
     for (const row of inserts) dedupMap.set(row.name.toLowerCase(), row);
     const deduped = Array.from(dedupMap.values());
     const { error } = await supabase.from("cities").upsert(deduped, { onConflict: "name" });
@@ -247,12 +259,12 @@ export function CitiesTab({ isAdmin }: Props) {
 
   const downloadTemplate = () => {
     const csv = [
-      "city_name,delivery_price,refused_price",
-      "Casablanca,25,10",
-      "Rabat,30,12",
-      "Marrakech,35,15",
-      "Tanger,40,18",
-      "Fes,35,15",
+      "city_name,ameex_city_id,delivery_price,refused_price",
+      "Casablanca,21,25,10",
+      "Rabat,2,30,12",
+      "Marrakech,1,35,15",
+      "Tanger,4,40,18",
+      "Fes,3,35,15",
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -263,6 +275,16 @@ export function CitiesTab({ isAdmin }: Props) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const deleteAll = async () => {
+    const { error, count } = await supabase
+      .from("cities")
+      .delete({ count: "exact" })
+      .not("id", "is", null);
+    if (error) return toast.error(error.message);
+    toast.success(`Deleted ${count ?? 0} city(ies)`);
+    load();
   };
 
   const filtered = rows.filter((r) =>
@@ -318,6 +340,32 @@ export function CitiesTab({ isAdmin }: Props) {
             <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
               <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline" disabled={rows.length === 0}>
+                  <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Delete all
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete ALL cities?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove all {rows.length} city(ies) from the database.
+                    You can re-import them from the CSV template afterwards. This
+                    action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={deleteAll}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete all
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" onClick={openNew}>
