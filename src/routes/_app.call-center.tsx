@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   PhoneCall, CheckCircle2, XCircle, PhoneOff, Clock, RotateCcw,
@@ -17,6 +19,8 @@ import {
   Keyboard, Repeat, Timer, Loader2, Play, Pencil, Headphones,
 } from "lucide-react";
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
+import { HistoriqueTab } from "@/components/call-center/HistoriqueTab";
+import type { StatusOpt } from "@/components/call-center/ChangeStatusDialog";
 
 // Lightweight WebAudio beep — no asset dependency
 function playBeep(kind: "success" | "error") {
