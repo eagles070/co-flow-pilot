@@ -21,6 +21,7 @@ import {
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 import { HistoriqueTab } from "@/components/call-center/HistoriqueTab";
 import type { StatusOpt } from "@/components/call-center/ChangeStatusDialog";
+import { confirmOrderAndShip } from "@/utils/call-center.functions";
 
 // Lightweight WebAudio beep — no asset dependency
 function playBeep(kind: "success" | "error") {
@@ -214,10 +215,38 @@ function CallCenterPage() {
         duration_seconds: callSeconds,
       }),
     ]);
+    if (oe || ce) {
+      setSaving(false);
+      playBeep("error");
+      toast.error(oe?.message || ce?.message || "Save failed");
+      return;
+    }
+
+    // On confirm: deduct stock + push to Ameex automatically
+    if (newStatus === "confirmed") {
+      try {
+        const result = await confirmOrderAndShip({ data: { order_id: current.id } });
+        const stockErrs = result.stock?.errors ?? [];
+        if (stockErrs.length > 0) {
+          stockErrs.forEach((m) => toast.error(`Stock: ${m}`));
+        }
+        if (!result.ameex?.ok) {
+          playBeep("error");
+          toast.error(`Ameex: ${result.ameex?.error ?? "failed"}`, { duration: 8000 });
+        } else {
+          playBeep("success");
+          toast.success(`Confirmed · Tracking ${result.ameex.tracking_number}`);
+        }
+      } catch (err: any) {
+        playBeep("error");
+        toast.error(`Confirm pipeline failed: ${err?.message ?? err}`, { duration: 8000 });
+      }
+    } else {
+      playBeep("error");
+      toast.success("Order processed");
+    }
+
     setSaving(false);
-    if (oe || ce) { playBeep("error"); toast.error(oe?.message || ce?.message || "Save failed"); return; }
-    playBeep(outcome === "confirmed" ? "success" : "error");
-    toast.success("Order processed");
     resetToIdle();
   }, [current, user, saving, note, recallAt, callSeconds, maxAttempts, resetToIdle]);
 

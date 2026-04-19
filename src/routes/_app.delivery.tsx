@@ -33,6 +33,7 @@ interface OrderRow {
 }
 
 const SHIPPING_STATUSES = [
+  "confirmed",
   "shipped",
   "in_transit",
   "delivered",
