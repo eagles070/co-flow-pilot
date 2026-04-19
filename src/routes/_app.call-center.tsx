@@ -329,7 +329,7 @@ function CallCenterPage() {
 
         <TabsContent value="queue" className="mt-4">
           {mode === "idle" ? (
-        <Card className="mx-auto max-w-2xl">
+            <Card className="mx-auto max-w-2xl">
           <CardContent className="flex flex-col items-center justify-center gap-5 py-16 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
               <Headphones className="h-10 w-10 text-primary" />
