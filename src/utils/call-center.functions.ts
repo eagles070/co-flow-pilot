@@ -127,8 +127,6 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       };
     }
 
-    }
-
     // 4) Resolve Ameex city ID from our cities table (matched by name)
     let ameexCityId: string | null = null;
     if (order.city) {
