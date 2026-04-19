@@ -46,7 +46,6 @@ import {
   deleteDeliveryProvider,
   testDeliveryProvider,
 } from "@/utils/integrations.functions";
-import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/integrations")({
@@ -344,15 +343,15 @@ function SheetsTab({
   });
 
   async function reconnectGoogle() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/integrations",
-      extraParams: {
-        scopes: "https://www.googleapis.com/auth/spreadsheets.readonly email profile openid",
-        access_type: "offline",
-        prompt: "consent",
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/integrations",
+        scopes: "https://www.googleapis.com/auth/spreadsheets.readonly email profile",
+        queryParams: { access_type: "offline", prompt: "consent" },
       },
     });
-    if (result.error) toast.error("Google sign-in failed");
+    if (error) toast.error("Google sign-in failed: " + error.message);
   }
 
   return (
