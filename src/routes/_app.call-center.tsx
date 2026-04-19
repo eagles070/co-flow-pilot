@@ -281,9 +281,9 @@ function CallCenterPage() {
                           <Repeat className="h-3 w-3" />Repeat ×{repeatCount}
                         </Badge>
                       )}
-                      {current.attempts >= 2 && (
-                        <Badge className={cn("gap-1", current.attempts >= 3 ? "bg-destructive text-destructive-foreground" : "bg-yellow-500 text-white")}>
-                          <AlertTriangle className="h-3 w-3" />NRP {current.attempts}
+                      {nrpLabel && (
+                        <Badge className={cn("gap-1", nrpTone)}>
+                          <AlertTriangle className="h-3 w-3" />{nrpLabel}
                         </Badge>
                       )}
                     </div>
