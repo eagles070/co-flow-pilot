@@ -1,0 +1,1 @@
+CREATE POLICY "Staff insert integration logs" ON public.integration_logs FOR INSERT TO authenticated WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role) OR public.has_role(auth.uid(), 'moderator'::app_role) OR public.has_role(auth.uid(), 'agent'::app_role));

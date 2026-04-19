@@ -169,12 +169,31 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       };
     }
 
-    const trackingNumber =
-      parsed?.code ||
-      parsed?.parcel_code ||
-      parsed?.CODE ||
-      parsed?.data?.code ||
-      null;
+    // Ameex returns the tracking code under various field names depending on
+    // account/version. Cover all known shapes + a deep search fallback.
+    const findTracking = (obj: any): string | null => {
+      if (!obj || typeof obj !== "object") return null;
+      const keys = [
+        "code", "CODE", "parcel_code", "PARCEL_CODE",
+        "parcel", "PARCEL", "tracking", "tracking_number",
+        "TRACKING", "barcode", "BARCODE", "num", "NUM",
+        "order_code", "ORDER_CODE",
+      ];
+      for (const k of keys) {
+        const v = obj[k];
+        if (typeof v === "string" && v.trim()) return v.trim();
+        if (typeof v === "number") return String(v);
+      }
+      for (const k of Object.keys(obj)) {
+        const v = obj[k];
+        if (v && typeof v === "object") {
+          const found = findTracking(v);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    const trackingNumber = findTracking(parsed);
 
     await db.from("integration_logs").insert({
       provider_type: "delivery",
@@ -199,10 +218,15 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     }
 
     if (!trackingNumber) {
+      const snippet = JSON.stringify(parsed).slice(0, 250);
       return {
         ok: false,
         stock: { applied: stockApplied, errors: stockErrors },
-        ameex: { ok: false, error: "Ameex did not return a tracking number", response: parsed },
+        ameex: {
+          ok: false,
+          error: `Ameex did not return a tracking number. Response: ${snippet}`,
+          response: parsed,
+        },
       };
     }
 
