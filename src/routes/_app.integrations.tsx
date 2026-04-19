@@ -531,6 +531,23 @@ function DeliveryTab({
   const update = useServerFn(updateDeliveryProvider);
   const del = useServerFn(deleteDeliveryProvider);
   const test = useServerFn(testDeliveryProvider);
+  const fetchSenders = useServerFn(fetchAmeexSenders);
+  const [senders, setSenders] = useState<Array<{ id: string; label: string }>>([]);
+
+  const sendersMut = useMutation({
+    mutationFn: () => fetchSenders({ data: { id: editId! } }),
+    onSuccess: (r: any) => {
+      setSenders(r?.senders ?? []);
+      if (!r?.senders?.length) {
+        toast.error(
+          "Couldn't auto-fetch senders. Open Ameex dashboard and copy the exact sender ID.",
+        );
+      } else {
+        toast.success(`Found ${r.senders.length} sender(s) — pick one below.`);
+      }
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const openEdit = (p: any) => {
     setEditId(p.id);
