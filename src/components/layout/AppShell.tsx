@@ -1,7 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard, ShoppingBag, PhoneCall, Truck, Package,
-  Factory, Users, UserCog, Plug, Wallet, Settings, ShieldAlert, FileClock,
+  Factory, Users, Plug, Wallet, Settings, ShieldAlert, FileClock,
   Moon, Sun, LogOut, Boxes, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
@@ -31,8 +31,7 @@ const NAV: NavItem[] = [
   { to: "/products", label: "Products & Stock", icon: Package, group: "ops" },
   { to: "/sourcing", label: "Sourcing", icon: Factory, group: "biz", roles: ["admin", "moderator"] },
   { to: "/finance", label: "Finance", icon: Wallet, group: "biz", roles: ["admin", "moderator", "media_buyer"] },
-  { to: "/team", label: "Team", icon: Users, group: "admin", roles: ["admin", "moderator"] },
-  { to: "/users", label: "Users & Roles", icon: UserCog, group: "admin", roles: ["admin"] },
+  { to: "/team", label: "Team", icon: Users, group: "admin", roles: ["admin"] },
   { to: "/integrations", label: "Integrations", icon: Plug, group: "admin", roles: ["admin"] },
   { to: "/blacklist", label: "Blacklist", icon: ShieldAlert, group: "admin", roles: ["admin", "moderator"] },
   { to: "/logs", label: "System Logs", icon: FileClock, group: "admin", roles: ["admin"] },

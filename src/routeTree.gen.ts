@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
-import { Route as AppUsersRouteImport } from './routes/_app.users'
 import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppSourcingRouteImport } from './routes/_app.sourcing'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
@@ -38,11 +37,6 @@ const AppRoute = AppRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppUsersRoute = AppUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTeamRoute = AppTeamRouteImport.update({
@@ -121,7 +115,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/sourcing': typeof AppSourcingRoute
   '/team': typeof AppTeamRoute
-  '/users': typeof AppUsersRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -137,7 +130,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/sourcing': typeof AppSourcingRoute
   '/team': typeof AppTeamRoute
-  '/users': typeof AppUsersRoute
   '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -156,7 +148,6 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/sourcing': typeof AppSourcingRoute
   '/_app/team': typeof AppTeamRoute
-  '/_app/users': typeof AppUsersRoute
   '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -176,7 +167,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sourcing'
     | '/team'
-    | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -192,7 +182,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sourcing'
     | '/team'
-    | '/users'
     | '/'
   id:
     | '__root__'
@@ -210,7 +199,6 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/sourcing'
     | '/_app/team'
-    | '/_app/users'
     | '/_app/'
   fileRoutesById: FileRoutesById
 }
@@ -240,13 +228,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/users': {
-      id: '/_app/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof AppUsersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/team': {
@@ -349,7 +330,6 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppSourcingRoute: typeof AppSourcingRoute
   AppTeamRoute: typeof AppTeamRoute
-  AppUsersRoute: typeof AppUsersRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
@@ -366,7 +346,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppSourcingRoute: AppSourcingRoute,
   AppTeamRoute: AppTeamRoute,
-  AppUsersRoute: AppUsersRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
