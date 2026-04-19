@@ -550,7 +550,13 @@ function CallCenterPage() {
             </div>
           </CardContent>
         </Card>
-      ) : null}
+          ) : null}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-4">
+          <HistoriqueTab statuses={statuses} stores={stores} />
+        </TabsContent>
+      </Tabs>
 
       <EditOrderDialog
         orderId={editOpen}
