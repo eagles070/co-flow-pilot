@@ -24,6 +24,8 @@ import { Route as AppFinanceRouteImport } from './routes/_app.finance'
 import { Route as AppDeliveryRouteImport } from './routes/_app.delivery'
 import { Route as AppCallCenterRouteImport } from './routes/_app.call-center'
 import { Route as AppBlacklistRouteImport } from './routes/_app.blacklist'
+import { Route as ApiWebhooksShopifyStoreIdRouteImport } from './routes/api/webhooks/shopify.$storeId'
+import { Route as ApiWebhooksAmeexProviderIdRouteImport } from './routes/api/webhooks/ameex.$providerId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -99,6 +101,18 @@ const AppBlacklistRoute = AppBlacklistRouteImport.update({
   path: '/blacklist',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiWebhooksShopifyStoreIdRoute =
+  ApiWebhooksShopifyStoreIdRouteImport.update({
+    id: '/api/webhooks/shopify/$storeId',
+    path: '/api/webhooks/shopify/$storeId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiWebhooksAmeexProviderIdRoute =
+  ApiWebhooksAmeexProviderIdRouteImport.update({
+    id: '/api/webhooks/ameex/$providerId',
+    path: '/api/webhooks/ameex/$providerId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -115,6 +129,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/sourcing': typeof AppSourcingRoute
   '/team': typeof AppTeamRoute
+  '/api/webhooks/ameex/$providerId': typeof ApiWebhooksAmeexProviderIdRoute
+  '/api/webhooks/shopify/$storeId': typeof ApiWebhooksShopifyStoreIdRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -131,6 +147,8 @@ export interface FileRoutesByTo {
   '/sourcing': typeof AppSourcingRoute
   '/team': typeof AppTeamRoute
   '/': typeof AppIndexRoute
+  '/api/webhooks/ameex/$providerId': typeof ApiWebhooksAmeexProviderIdRoute
+  '/api/webhooks/shopify/$storeId': typeof ApiWebhooksShopifyStoreIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -149,6 +167,8 @@ export interface FileRoutesById {
   '/_app/sourcing': typeof AppSourcingRoute
   '/_app/team': typeof AppTeamRoute
   '/_app/': typeof AppIndexRoute
+  '/api/webhooks/ameex/$providerId': typeof ApiWebhooksAmeexProviderIdRoute
+  '/api/webhooks/shopify/$storeId': typeof ApiWebhooksShopifyStoreIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,6 +187,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sourcing'
     | '/team'
+    | '/api/webhooks/ameex/$providerId'
+    | '/api/webhooks/shopify/$storeId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -183,6 +205,8 @@ export interface FileRouteTypes {
     | '/sourcing'
     | '/team'
     | '/'
+    | '/api/webhooks/ameex/$providerId'
+    | '/api/webhooks/shopify/$storeId'
   id:
     | '__root__'
     | '/_app'
@@ -200,11 +224,15 @@ export interface FileRouteTypes {
     | '/_app/sourcing'
     | '/_app/team'
     | '/_app/'
+    | '/api/webhooks/ameex/$providerId'
+    | '/api/webhooks/shopify/$storeId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiWebhooksAmeexProviderIdRoute: typeof ApiWebhooksAmeexProviderIdRoute
+  ApiWebhooksShopifyStoreIdRoute: typeof ApiWebhooksShopifyStoreIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -314,6 +342,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBlacklistRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/webhooks/shopify/$storeId': {
+      id: '/api/webhooks/shopify/$storeId'
+      path: '/api/webhooks/shopify/$storeId'
+      fullPath: '/api/webhooks/shopify/$storeId'
+      preLoaderRoute: typeof ApiWebhooksShopifyStoreIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/ameex/$providerId': {
+      id: '/api/webhooks/ameex/$providerId'
+      path: '/api/webhooks/ameex/$providerId'
+      fullPath: '/api/webhooks/ameex/$providerId'
+      preLoaderRoute: typeof ApiWebhooksAmeexProviderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -354,6 +396,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiWebhooksAmeexProviderIdRoute: ApiWebhooksAmeexProviderIdRoute,
+  ApiWebhooksShopifyStoreIdRoute: ApiWebhooksShopifyStoreIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
