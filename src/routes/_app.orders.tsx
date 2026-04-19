@@ -264,7 +264,13 @@ function OrdersPage() {
 
   const buildStatusPatch = (status: OrderStatus) => {
     const now = new Date().toISOString();
-    const patch: Record<string, unknown> = { status };
+    const patch: {
+      status: OrderStatus;
+      confirmed_at?: string;
+      shipped_at?: string;
+      delivered_at?: string;
+      returned_at?: string;
+    } = { status };
     if (status === "confirmed") patch.confirmed_at = now;
     if (status === "shipped") patch.shipped_at = now;
     if (status === "delivered") patch.delivered_at = now;
