@@ -228,6 +228,18 @@ function CallCenterPage() {
     resetToIdle();
   }, [current, resetToIdle]);
 
+  // Apply a custom status from the dynamic dropdown (Settings → Statuses)
+  const submitDropdownStatus = useCallback(async () => {
+    if (!current || !user || saving || !dropdownStatus) return;
+    // Map well-known keys to call_attempts.outcome
+    const outcomeMap: Record<string, Outcome> = {
+      confirmed: "confirmed", cancelled: "cancelled", no_reply: "no_reply",
+      postponed: "postponed", duplicate: "cancelled",
+    };
+    const outcome: Outcome = outcomeMap[dropdownStatus] ?? "callback_requested";
+    await finishAndReset(dropdownStatus as OrderStatus, outcome);
+  }, [current, user, saving, dropdownStatus, finishAndReset]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
