@@ -405,13 +405,16 @@ function CallCenterPage() {
                 {/* Primary actions — large */}
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                   <Button onClick={() => finishAndNext("confirmed", "confirmed")} disabled={saving} size="lg" className="bg-emerald-600 hover:bg-emerald-700">
-                    <CheckCircle2 className="mr-2 h-5 w-5" />Confirm <kbd className="ml-2 rounded bg-emerald-800/40 px-1.5 py-0.5 text-[10px]">⏎</kbd>
+                    {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
+                    Confirm <kbd className="ml-2 rounded bg-emerald-800/40 px-1.5 py-0.5 text-[10px]">⏎</kbd>
                   </Button>
                   <Button onClick={() => finishAndNext("no_reply", "no_reply")} disabled={saving} size="lg" variant="secondary">
-                    <PhoneOff className="mr-2 h-5 w-5" />No reply <kbd className="ml-2 rounded bg-muted-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>
+                    {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <PhoneOff className="mr-2 h-5 w-5" />}
+                    No reply <kbd className="ml-2 rounded bg-muted-foreground/20 px-1.5 py-0.5 text-[10px]">N</kbd>
                   </Button>
                   <Button onClick={() => finishAndNext("postponed", "postponed")} disabled={saving} size="lg" variant="secondary">
-                    <Clock className="mr-2 h-5 w-5" />Postpone <kbd className="ml-2 rounded bg-muted-foreground/20 px-1.5 py-0.5 text-[10px]">P</kbd>
+                    {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Clock className="mr-2 h-5 w-5" />}
+                    Postpone <kbd className="ml-2 rounded bg-muted-foreground/20 px-1.5 py-0.5 text-[10px]">P</kbd>
                   </Button>
                 </div>
                 {/* Secondary actions */}
