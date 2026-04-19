@@ -446,7 +446,7 @@ function CallCenterPage() {
           </CardHeader>
           <CardContent className="max-h-[640px] overflow-y-auto p-0">
             {remaining.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">No more orders.</div>
+              <div className="p-6 text-center text-sm text-muted-foreground">No orders in queue.</div>
             ) : (
               <ul className="divide-y">
                 {remaining.slice(0, 30).map((o) => {
