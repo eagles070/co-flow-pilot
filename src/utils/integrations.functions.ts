@@ -299,7 +299,7 @@ export const createDeliveryProvider = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
     const webhook_token = randomToken(24);
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("delivery_providers")
       .insert({
         name: data.name,
@@ -322,7 +322,7 @@ export const deleteDeliveryProvider = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
-    const { error } = await supabaseAdmin
+    const { error } = await context.supabase
       .from("delivery_providers")
       .delete()
       .eq("id", data.id);
@@ -335,7 +335,8 @@ export const testDeliveryProvider = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
-    const { data: p, error } = await supabaseAdmin
+    const db = context.supabase;
+    const { data: p, error } = await db
       .from("delivery_providers")
       .select("*")
       .eq("id", data.id)
@@ -348,7 +349,7 @@ export const testDeliveryProvider = createServerFn({ method: "POST" })
     });
     const text = await res.text();
 
-    await logIntegration({
+    await logIntegration(db, {
       provider_type: "delivery",
       provider_id: p.id,
       direction: "outgoing",
@@ -366,14 +367,15 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
   .inputValidator((input: { order_id: string; provider_id: string }) => input)
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
+    const db = context.supabase;
 
     const [{ data: order }, { data: provider }] = await Promise.all([
-      supabaseAdmin
+      db
         .from("orders")
         .select("*, order_items(product_name, quantity)")
         .eq("id", data.order_id)
         .single(),
-      supabaseAdmin
+      db
         .from("delivery_providers")
         .select("*")
         .eq("id", data.provider_id)
@@ -419,7 +421,7 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
     const trackingNumber =
       parsed?.code || parsed?.parcel_code || parsed?.CODE || parsed?.data?.code || null;
 
-    await logIntegration({
+    await logIntegration(db, {
       provider_type: "delivery",
       provider_id: provider.id,
       direction: "outgoing",
@@ -433,7 +435,7 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
     if (!res.ok) throw new Error(`Ameex error: HTTP ${res.status}`);
 
     if (trackingNumber) {
-      await supabaseAdmin.from("deliveries").upsert(
+      await db.from("deliveries").upsert(
         {
           order_id: order.id,
           carrier: provider.name,
@@ -443,13 +445,13 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
         },
         { onConflict: "order_id" },
       );
-      await supabaseAdmin
+      await db
         .from("orders")
         .update({ status: "shipped", shipped_at: new Date().toISOString() })
         .eq("id", order.id);
     }
 
-    await supabaseAdmin
+    await db
       .from("delivery_providers")
       .update({ last_sync_at: new Date().toISOString() })
       .eq("id", provider.id);
