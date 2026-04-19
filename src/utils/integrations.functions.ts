@@ -399,6 +399,111 @@ export const testDeliveryProvider = createServerFn({ method: "POST" })
     return { http_status: res.status, body: text.slice(0, 200) };
   });
 
+// Fetch the list of valid sender (expediteur) IDs from Ameex.
+// Ameex exposes the senders list under multiple possible paths depending on
+// account type — we try the most common ones and return whichever responds
+// with usable data so the operator can pick the exact ID Ameex expects.
+export const fetchAmeexSenders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => input)
+  .handler(async ({ data, context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const db = context.supabase;
+    const { data: p, error } = await db
+      .from("delivery_providers")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (error || !p) throw new Error("Provider not found");
+
+    const candidatePaths = [
+      "/customer/Delivery/Senders/List",
+      "/customer/Delivery/Sender/List",
+      "/customer/Delivery/Expediteurs/List",
+      "/customer/Delivery/Expediteur/List",
+      "/customer/Account/Senders/List",
+      "/customer/Account/Expediteurs/List",
+      "/customer/Business/List",
+    ];
+
+    const attempts: Array<{ url: string; status: number; body: string }> = [];
+    let senders: Array<{ id: string; label: string }> = [];
+
+    for (const path of candidatePaths) {
+      const url = `${p.base_url}${path}`;
+      try {
+        const res = await fetch(url, {
+          headers: { "C-Api-Id": p.api_id, "C-Api-Key": p.api_key },
+        });
+        const text = await res.text();
+        attempts.push({ url, status: res.status, body: text.slice(0, 300) });
+
+        if (!res.ok) continue;
+        let json: any;
+        try {
+          json = JSON.parse(text);
+        } catch {
+          continue;
+        }
+        if (json?.api?.type === "error") continue;
+
+        // Try to extract a list of {id,label}
+        const collect = (node: any): Array<{ id: string; label: string }> => {
+          const out: Array<{ id: string; label: string }> = [];
+          const walk = (n: any) => {
+            if (!n) return;
+            if (Array.isArray(n)) {
+              for (const item of n) walk(item);
+              return;
+            }
+            if (typeof n === "object") {
+              const idKey = ["id", "ID", "sender_id", "expediteur_id", "business_id"].find(
+                (k) => n[k] !== undefined && n[k] !== null,
+              );
+              const nameKey = [
+                "name",
+                "label",
+                "title",
+                "company",
+                "raison_sociale",
+                "nom",
+              ].find((k) => typeof n[k] === "string" && n[k]);
+              if (idKey) {
+                out.push({
+                  id: String(n[idKey]),
+                  label: nameKey ? `${n[nameKey]} (#${n[idKey]})` : `#${n[idKey]}`,
+                });
+                return;
+              }
+              for (const k of Object.keys(n)) walk(n[k]);
+            }
+          };
+          walk(node);
+          return out;
+        };
+        const found = collect(json);
+        if (found.length) {
+          senders = found;
+          break;
+        }
+      } catch (err: any) {
+        attempts.push({ url, status: 0, body: err?.message || "fetch failed" });
+      }
+    }
+
+    await logIntegration(db, {
+      provider_type: "delivery",
+      provider_id: p.id,
+      direction: "outgoing",
+      endpoint: "fetchAmeexSenders",
+      status: senders.length ? "success" : "error",
+      payload: { attempts, senders },
+      error: senders.length ? undefined : "Could not fetch sender list from Ameex",
+    });
+
+    return { senders, attempts };
+  });
+
 export const sendOrderToAmeex = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { order_id: string; provider_id: string }) => input)
