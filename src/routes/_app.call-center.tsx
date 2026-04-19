@@ -509,16 +509,33 @@ function CallCenterPage() {
               </Button>
             </div>
             {/* Secondary actions */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
               <Button onClick={() => finishAndReset("cancelled", "cancelled")} disabled={saving} variant="destructive">
                 <XCircle className="mr-2 h-4 w-4" />Cancel <kbd className="ml-2 rounded bg-destructive-foreground/20 px-1.5 py-0.5 text-[10px]">C</kbd>
               </Button>
               <Button onClick={() => finishAndReset("cancelled", "wrong_number")} disabled={saving} variant="outline">
-                Wrong #
+                Wrong number
               </Button>
-              <Button onClick={skipOrder} disabled={saving} variant="ghost">
-                Skip <kbd className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px]">S</kbd>
-              </Button>
+              <div className="flex gap-1">
+                <Select value={dropdownStatus} onValueChange={setDropdownStatus} disabled={saving}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select status…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuses.map((s) => (
+                      <SelectItem key={s.key} value={s.key}>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
+                          {s.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={submitDropdownStatus} disabled={saving || !dropdownStatus} variant="default">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
