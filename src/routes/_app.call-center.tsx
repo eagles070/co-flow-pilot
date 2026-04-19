@@ -87,6 +87,7 @@ function CallCenterPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
+  const noteRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Load max attempts setting
   useEffect(() => {
@@ -102,6 +103,14 @@ function CallCenterPage() {
       timerRef.current = window.setInterval(() => setCallSeconds((s) => s + 1), 1000);
     }
     return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
+  }, [current?.id]);
+
+  // Auto-focus note input when an order loads
+  useEffect(() => {
+    if (current && noteRef.current) {
+      const t = window.setTimeout(() => noteRef.current?.focus(), 120);
+      return () => window.clearTimeout(t);
+    }
   }, [current?.id]);
 
   const loadOrder = useCallback(async (o: QueueOrder) => {
