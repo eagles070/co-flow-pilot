@@ -34,7 +34,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Users, RefreshCw, Pencil, Trash2 } from "lucide-react";
+import {
+  Search,
+  Users,
+  RefreshCw,
+  Pencil,
+  Trash2,
+  Phone,
+  CheckCircle2,
+  XCircle,
+  ListChecks,
+} from "lucide-react";
 import {
   ORDER_SOURCES,
   ORDER_STATUSES,
@@ -45,12 +55,15 @@ import {
 } from "@/lib/order-status";
 import { NewOrderDialog } from "@/components/orders/NewOrderDialog";
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
+import { OrderDetailSheet } from "@/components/orders/OrderDetailSheet";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/orders")({
   component: OrdersPage,
 });
 
 interface OrderItem {
+  product_id: string | null;
   product_name: string;
   quantity: number;
 }
@@ -67,7 +80,9 @@ interface OrderRow {
   source: OrderSource;
   store_id: string | null;
   agent_id: string | null;
+  attempts: number;
   created_at: string;
+  updated_at: string;
   order_items: OrderItem[];
 }
 
@@ -82,6 +97,54 @@ interface StoreOpt {
   name: string;
 }
 
+interface ProductOpt {
+  id: string;
+  name: string;
+}
+
+const DATE_RANGES = [
+  { value: "all", label: "All time" },
+  { value: "today", label: "Today" },
+  { value: "7", label: "Last 7 days" },
+  { value: "30", label: "Last 30 days" },
+];
+
+function rowTone(s: OrderStatus): string {
+  switch (s) {
+    case "new":
+    case "assigned":
+      return "bg-row-new/40 hover:bg-row-new/60";
+    case "no_reply":
+    case "postponed":
+      return "bg-row-nrp/40 hover:bg-row-nrp/60";
+    case "confirmed":
+      return "bg-row-confirmed/40 hover:bg-row-confirmed/60";
+    case "shipped":
+    case "in_transit":
+      return "bg-row-shipped/40 hover:bg-row-shipped/60";
+    case "delivered":
+      return "bg-row-delivered/40 hover:bg-row-delivered/60";
+    case "cancelled":
+    case "refused":
+    case "returned":
+    case "duplicate":
+      return "bg-row-danger/40 hover:bg-row-danger/60";
+    default:
+      return "hover:bg-muted/40";
+  }
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
 function OrdersPage() {
   const { hasAnyRole } = useAuth();
   const canManage = hasAnyRole(["admin", "moderator"]);
@@ -89,6 +152,7 @@ function OrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [agents, setAgents] = useState<AgentOpt[]>([]);
   const [stores, setStores] = useState<StoreOpt[]>([]);
+  const [products, setProducts] = useState<ProductOpt[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -96,16 +160,23 @@ function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [agentFilter, setAgentFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<string>("all");
+
   const [bulkAgent, setBulkAgent] = useState<string>("");
+  const [bulkStatus, setBulkStatus] = useState<string>("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
-    const [ordersRes, agentsRes, storesRes] = await Promise.all([
+    const [ordersRes, agentsRes, storesRes, productsRes] = await Promise.all([
       supabase
         .from("orders")
-        .select("*, order_items(product_name, quantity)")
+        .select("*, order_items(product_id, product_name, quantity)")
         .order("created_at", { ascending: false })
         .limit(500),
       supabase
@@ -113,6 +184,7 @@ function OrdersPage() {
         .select("user_id, profiles:user_id(id, full_name, email)")
         .in("role", ["agent", "admin", "moderator"]),
       supabase.from("stores").select("id, name").order("name"),
+      supabase.from("products").select("id, name").eq("is_active", true).order("name"),
     ]);
 
     if (ordersRes.error) toast.error(ordersRes.error.message);
@@ -129,6 +201,7 @@ function OrdersPage() {
     });
     setAgents(ag);
     setStores((storesRes.data ?? []) as StoreOpt[]);
+    setProducts((productsRes.data ?? []) as ProductOpt[]);
     setSelected(new Set());
     setLoading(false);
   };
@@ -137,8 +210,24 @@ function OrdersPage() {
     fetchAll();
   }, []);
 
+  const cities = useMemo(() => {
+    const set = new Set<string>();
+    orders.forEach((o) => o.city && set.add(o.city));
+    return Array.from(set).sort();
+  }, [orders]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const now = Date.now();
+    const cutoff =
+      dateRange === "today"
+        ? new Date(new Date().setHours(0, 0, 0, 0)).getTime()
+        : dateRange === "7"
+        ? now - 7 * 86400000
+        : dateRange === "30"
+        ? now - 30 * 86400000
+        : 0;
+
     return orders.filter((o) => {
       if (statusFilter !== "all" && o.status !== statusFilter) return false;
       if (sourceFilter !== "all" && o.source !== sourceFilter) return false;
@@ -146,6 +235,9 @@ function OrdersPage() {
         if (agentFilter === "unassigned" && o.agent_id) return false;
         if (agentFilter !== "unassigned" && o.agent_id !== agentFilter) return false;
       }
+      if (cityFilter !== "all" && (o.city ?? "") !== cityFilter) return false;
+      if (productFilter !== "all" && !o.order_items?.some((it) => it.product_id === productFilter)) return false;
+      if (cutoff > 0 && new Date(o.created_at).getTime() < cutoff) return false;
       if (q) {
         return (
           o.reference.toLowerCase().includes(q) ||
@@ -156,7 +248,7 @@ function OrdersPage() {
       }
       return true;
     });
-  }, [orders, search, statusFilter, sourceFilter, agentFilter]);
+  }, [orders, search, statusFilter, sourceFilter, agentFilter, cityFilter, productFilter, dateRange]);
 
   const allSelected = filtered.length > 0 && filtered.every((o) => selected.has(o.id));
   const toggleAll = () => {
@@ -170,28 +262,23 @@ function OrdersPage() {
     setSelected(next);
   };
 
-  const updateStatus = async (id: string, status: OrderStatus) => {
+  const buildStatusPatch = (status: OrderStatus) => {
     const now = new Date().toISOString();
-    const patch: {
-      status: OrderStatus;
-      confirmed_at?: string;
-      shipped_at?: string;
-      delivered_at?: string;
-      returned_at?: string;
-    } = { status };
+    const patch: Record<string, unknown> = { status };
     if (status === "confirmed") patch.confirmed_at = now;
     if (status === "shipped") patch.shipped_at = now;
     if (status === "delivered") patch.delivered_at = now;
     if (status === "returned" || status === "refused") patch.returned_at = now;
+    return patch;
+  };
 
-    const { error } = await supabase.from("orders").update(patch).eq("id", id);
+  const updateStatus = async (id: string, status: OrderStatus) => {
+    const { error } = await supabase.from("orders").update(buildStatusPatch(status)).eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status } : o))
-    );
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
     toast.success("Status updated");
   };
 
@@ -211,12 +298,26 @@ function OrdersPage() {
     }
     toast.success(`Assigned ${ids.length} order(s)`);
     setOrders((prev) =>
-      prev.map((o) =>
-        selected.has(o.id) ? { ...o, agent_id: bulkAgent, status: "assigned" } : o
-      )
+      prev.map((o) => (selected.has(o.id) ? { ...o, agent_id: bulkAgent, status: "assigned" } : o))
     );
     setSelected(new Set());
     setBulkAgent("");
+  };
+
+  const bulkChangeStatus = async () => {
+    if (!bulkStatus || selected.size === 0) return;
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("orders").update(buildStatusPatch(bulkStatus as OrderStatus)).in("id", ids);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Updated ${ids.length} order(s)`);
+    setOrders((prev) =>
+      prev.map((o) => (selected.has(o.id) ? { ...o, status: bulkStatus as OrderStatus } : o))
+    );
+    setSelected(new Set());
+    setBulkStatus("");
   };
 
   const confirmDelete = async () => {
@@ -231,11 +332,31 @@ function OrdersPage() {
     setDeletingId(null);
   };
 
+  const confirmBulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    const { error } = await supabase.from("orders").delete().in("id", ids);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setOrders((prev) => prev.filter((o) => !selected.has(o.id)));
+    toast.success(`Deleted ${ids.length} order(s)`);
+    setSelected(new Set());
+    setBulkDeleteOpen(false);
+  };
+
   const agentName = (id: string | null) => {
     if (!id) return "—";
     const a = agents.find((x) => x.id === id);
     return a?.full_name || a?.email || "Unknown";
   };
+
+  const callPhone = (phone: string) => {
+    window.location.href = `tel:${phone}`;
+  };
+
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
     <div>
@@ -266,44 +387,61 @@ function OrdersPage() {
           </div>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               {ORDER_STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Source" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Source" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All sources</SelectItem>
               {ORDER_SOURCES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           <Select value={agentFilter} onValueChange={setAgentFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Agent" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Agent" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All agents</SelectItem>
               <SelectItem value="unassigned">Unassigned</SelectItem>
               {agents.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.full_name || a.email}
-                </SelectItem>
+                <SelectItem key={a.id} value={a.id}>{a.full_name || a.email}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={cityFilter} onValueChange={setCityFilter}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="City" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All cities</SelectItem>
+              {cities.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={productFilter} onValueChange={setProductFilter}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Product" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All products</SelectItem>
+              {products.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {DATE_RANGES.map((d) => (
+                <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -311,24 +449,35 @@ function OrdersPage() {
 
         {/* Bulk bar */}
         {canManage && selected.size > 0 && (
-          <div className="mb-3 flex items-center gap-2 rounded-md border bg-muted/30 p-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 p-2">
             <span className="text-sm font-medium">{selected.size} selected</span>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <Select value={bulkAgent} onValueChange={setBulkAgent}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Assign to agent..." />
-                </SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Assign to agent..." /></SelectTrigger>
                 <SelectContent>
                   {agents.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.full_name || a.email}
-                    </SelectItem>
+                    <SelectItem key={a.id} value={a.id}>{a.full_name || a.email}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={bulkAssign} disabled={!bulkAgent}>
-                <Users className="mr-2 h-4 w-4" />
-                Assign
+              <Button onClick={bulkAssign} disabled={!bulkAgent} size="sm">
+                <Users className="mr-1 h-4 w-4" />Assign
+              </Button>
+
+              <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Change status..." /></SelectTrigger>
+                <SelectContent>
+                  {ORDER_STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={bulkChangeStatus} disabled={!bulkStatus} size="sm" variant="secondary">
+                <ListChecks className="mr-1 h-4 w-4" />Apply
+              </Button>
+
+              <Button onClick={() => setBulkDeleteOpen(true)} size="sm" variant="destructive">
+                <Trash2 className="mr-1 h-4 w-4" />Delete
               </Button>
             </div>
           </div>
@@ -347,47 +496,47 @@ function OrdersPage() {
                 <TableHead>Reference</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>Address</TableHead>
                 <TableHead>City</TableHead>
                 <TableHead>Products</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Agent</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                {canManage && <TableHead className="w-24 text-right">Actions</TableHead>}
+                <TableHead className="text-center">NRP</TableHead>
+                <TableHead>Waiting</TableHead>
+                <TableHead>Last action</TableHead>
+                <TableHead className="w-44 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={canManage ? 13 : 11} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={canManage ? 14 : 13} className="py-8 text-center text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canManage ? 13 : 11} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={canManage ? 14 : 13} className="py-8 text-center text-muted-foreground">
                     No orders match your filters.
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((o) => (
-                  <TableRow key={o.id} data-state={selected.has(o.id) ? "selected" : undefined}>
+                  <TableRow
+                    key={o.id}
+                    data-state={selected.has(o.id) ? "selected" : undefined}
+                    className={cn("cursor-pointer", rowTone(o.status))}
+                    onClick={() => setDetailId(o.id)}
+                  >
                     {canManage && (
-                      <TableCell>
-                        <Checkbox
-                          checked={selected.has(o.id)}
-                          onCheckedChange={() => toggleOne(o.id)}
-                        />
+                      <TableCell onClick={stop}>
+                        <Checkbox checked={selected.has(o.id)} onCheckedChange={() => toggleOne(o.id)} />
                       </TableCell>
                     )}
                     <TableCell className="font-mono text-xs">{o.reference}</TableCell>
                     <TableCell className="font-medium">{o.customer_name}</TableCell>
                     <TableCell>{o.customer_phone}</TableCell>
-                    <TableCell className="max-w-[180px] truncate text-sm text-muted-foreground" title={o.shipping_address ?? ""}>
-                      {o.shipping_address ?? "—"}
-                    </TableCell>
                     <TableCell>{o.city ?? "—"}</TableCell>
                     <TableCell className="max-w-[200px] text-sm">
                       {o.order_items && o.order_items.length > 0 ? (
@@ -398,27 +547,20 @@ function OrdersPage() {
                             </div>
                           ))}
                           {o.order_items.length > 2 && (
-                            <div className="text-xs text-muted-foreground">
-                              +{o.order_items.length - 2} more
-                            </div>
+                            <div className="text-xs text-muted-foreground">+{o.order_items.length - 2} more</div>
                           )}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>{Number(o.total_amount).toFixed(2)}</TableCell>
+                    <TableCell className="font-medium">{Number(o.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {o.source.replace("_", " ")}
-                      </Badge>
+                      <Badge variant="outline" className="capitalize">{o.source.replace("_", " ")}</Badge>
                     </TableCell>
                     <TableCell className="text-sm">{agentName(o.agent_id)}</TableCell>
-                    <TableCell>
-                      <Select
-                        value={o.status}
-                        onValueChange={(v) => updateStatus(o.id, v as OrderStatus)}
-                      >
+                    <TableCell onClick={stop}>
+                      <Select value={o.status} onValueChange={(v) => updateStatus(o.id, v as OrderStatus)}>
                         <SelectTrigger className="h-8 w-[140px] border-0 bg-transparent p-0 hover:bg-accent/50">
                           <Badge variant={statusVariant(o.status)} className="cursor-pointer">
                             {statusLabel(o.status)}
@@ -426,38 +568,72 @@ function OrdersPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {ORDER_STATUSES.map((s) => (
-                            <SelectItem key={s.value} value={s.value}>
-                              {s.label}
-                            </SelectItem>
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(o.created_at).toLocaleDateString()}
+                    <TableCell className="text-center">
+                      {o.attempts > 0 ? (
+                        <Badge
+                          variant={o.attempts >= 3 ? "destructive" : "outline"}
+                          className="font-mono"
+                        >
+                          NRP ({o.attempts})
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">0</span>
+                      )}
                     </TableCell>
-                    {canManage && (
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setEditingId(o.id)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setDeletingId(o.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    )}
+                    <TableCell className="text-xs text-muted-foreground">{timeAgo(o.created_at)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{timeAgo(o.updated_at)}</TableCell>
+                    <TableCell className="text-right" onClick={stop}>
+                      <div className="flex justify-end gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Call"
+                          onClick={() => callPhone(o.customer_phone)}
+                        >
+                          <Phone className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-success hover:text-success"
+                          title="Confirm"
+                          onClick={() => updateStatus(o.id, "confirmed")}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          title="Cancel"
+                          onClick={() => updateStatus(o.id, "cancelled")}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                        {canManage && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => setEditingId(o.id)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              title="Delete"
+                              onClick={() => setDeletingId(o.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -472,6 +648,8 @@ function OrdersPage() {
         onClose={() => setEditingId(null)}
         onSaved={fetchAll}
       />
+
+      <OrderDetailSheet orderId={detailId} onClose={() => setDetailId(null)} />
 
       <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
         <AlertDialogContent>
@@ -488,6 +666,26 @@ function OrdersPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selected.size} order(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. All selected orders, their items and history will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete all
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
