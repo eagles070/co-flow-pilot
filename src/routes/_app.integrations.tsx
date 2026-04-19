@@ -533,14 +533,18 @@ function DeliveryTab({
   const test = useServerFn(testDeliveryProvider);
   const fetchSenders = useServerFn(fetchAmeexSenders);
   const [senders, setSenders] = useState<Array<{ id: string; label: string }>>([]);
+  const [senderAttempts, setSenderAttempts] = useState<
+    Array<{ url: string; status: number; body: string }>
+  >([]);
 
   const sendersMut = useMutation({
     mutationFn: () => fetchSenders({ data: { id: editId! } }),
     onSuccess: (r: any) => {
       setSenders(r?.senders ?? []);
+      setSenderAttempts(r?.attempts ?? []);
       if (!r?.senders?.length) {
         toast.error(
-          "Couldn't auto-fetch senders. Open Ameex dashboard and copy the exact sender ID.",
+          "Couldn't auto-fetch senders. See probe details below or copy the exact sender ID from your Ameex dashboard.",
         );
       } else {
         toast.success(`Found ${r.senders.length} sender(s) — pick one below.`);
@@ -836,6 +840,37 @@ function DeliveryTab({
                 Click "Fetch from Ameex" to load valid sender IDs from your account, or paste
                 the exact ID copied from the Ameex dashboard.
               </p>
+              {senderAttempts.length > 0 && (
+                <details className="mt-2 rounded-md border bg-muted/30 p-2">
+                  <summary className="cursor-pointer text-xs font-medium">
+                    Probe details ({senderAttempts.length} endpoint
+                    {senderAttempts.length > 1 ? "s" : ""} tried)
+                  </summary>
+                  <div className="mt-2 max-h-48 space-y-2 overflow-y-auto text-xs font-mono">
+                    {senderAttempts.map((a, i) => (
+                      <div key={i} className="rounded bg-background p-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate">{a.url}</span>
+                          <span
+                            className={
+                              a.status >= 200 && a.status < 300
+                                ? "text-emerald-600"
+                                : "text-destructive"
+                            }
+                          >
+                            {a.status}
+                          </span>
+                        </div>
+                        {a.body && (
+                          <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap break-all text-[10px] text-muted-foreground">
+                            {a.body.slice(0, 400)}
+                          </pre>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
             <div>
               <Label>Base URL</Label>
