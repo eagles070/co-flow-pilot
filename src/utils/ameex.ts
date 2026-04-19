@@ -8,6 +8,8 @@ type AmeexOrder = {
   customer_name: string;
   customer_phone: string;
   city: string | null;
+  /** Numeric Ameex city ID (e.g. "21"). When present, takes priority over `city` name. */
+  ameex_city_id?: string | null;
   shipping_address: string | null;
   notes: string | null;
   total_amount: number | string;
@@ -54,7 +56,9 @@ export function buildAmeexParcelForm({
   form.append("fragile", "0");
   form.append("receiver", order.customer_name);
   form.append("phone", order.customer_phone);
-  form.append("city", order.city || "1");
+  // Ameex expects the numeric city ID, not the city name. Fall back to "1" only as last resort.
+  const cityValue = order.ameex_city_id?.trim() || order.city || "1";
+  form.append("city", cityValue);
   form.append("address", order.shipping_address || "N/A");
   form.append("comment", order.notes || "");
   form.append("product", productLabel);
