@@ -259,12 +259,12 @@ export function CitiesTab({ isAdmin }: Props) {
 
   const downloadTemplate = () => {
     const csv = [
-      "city_name,delivery_price,refused_price",
-      "Casablanca,25,10",
-      "Rabat,30,12",
-      "Marrakech,35,15",
-      "Tanger,40,18",
-      "Fes,35,15",
+      "city_name,ameex_city_id,delivery_price,refused_price",
+      "Casablanca,21,25,10",
+      "Rabat,2,30,12",
+      "Marrakech,1,35,15",
+      "Tanger,4,40,18",
+      "Fes,3,35,15",
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -275,6 +275,16 @@ export function CitiesTab({ isAdmin }: Props) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const deleteAll = async () => {
+    const { error, count } = await supabase
+      .from("cities")
+      .delete({ count: "exact" })
+      .not("id", "is", null);
+    if (error) return toast.error(error.message);
+    toast.success(`Deleted ${count ?? 0} city(ies)`);
+    load();
   };
 
   const filtered = rows.filter((r) =>
