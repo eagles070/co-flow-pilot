@@ -63,11 +63,13 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       const productId = matchedProduct?.id ?? null;
 
       ameexItems.push({
-        // Send the real product NAME to Ameex (not the SKU) so the parcel
-        // label stays human-readable. Ameex deducts warehouse stock on
-        // their side using their own product → SKU mapping.
+        // Ameex deducts warehouse stock by matching the SKU inside the
+        // `product` field. Send SKU as the label (fallback to name only
+        // if no SKU is configured) so Ameex links the parcel to the
+        // correct warehouse product instead of treating it as a sample.
         product_name: matchedProduct?.name || item.product_name,
         quantity: item.quantity,
+        sku: matchedProduct?.sku ?? null,
       });
 
       if (!productId) {
