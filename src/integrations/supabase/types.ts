@@ -169,6 +169,36 @@ export type Database = {
         }
         Relationships: []
       }
+      cities: {
+        Row: {
+          created_at: string
+          delivery_cost: number
+          id: string
+          is_active: boolean
+          name: string
+          return_cost: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_cost?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          return_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_cost?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          return_cost?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deliveries: {
         Row: {
           carrier: string
@@ -280,6 +310,33 @@ export type Database = {
           status?: string
           updated_at?: string
           webhook_token?: string
+        }
+        Relationships: []
+      }
+      expense_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -438,6 +495,36 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          alert_key: string
+          email: boolean
+          enabled: boolean
+          id: string
+          in_app: boolean
+          threshold: number | null
+          updated_at: string
+        }
+        Insert: {
+          alert_key: string
+          email?: boolean
+          enabled?: boolean
+          id?: string
+          in_app?: boolean
+          threshold?: number | null
+          updated_at?: string
+        }
+        Update: {
+          alert_key?: string
+          email?: boolean
+          enabled?: boolean
+          id?: string
+          in_app?: boolean
+          threshold?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -482,6 +569,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      order_sources: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       order_status_history: {
         Row: {
@@ -839,6 +953,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      status_configs: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_system: boolean
+          key: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       stock_movements: {
         Row: {
