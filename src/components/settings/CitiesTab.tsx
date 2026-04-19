@@ -340,6 +340,32 @@ export function CitiesTab({ isAdmin }: Props) {
             <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
               <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline" disabled={rows.length === 0}>
+                  <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Delete all
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete ALL cities?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove all {rows.length} city(ies) from the database.
+                    You can re-import them from the CSV template afterwards. This
+                    action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={deleteAll}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete all
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" onClick={openNew}>
