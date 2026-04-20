@@ -49,7 +49,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       unit_price: number;
     }>) ?? [];
 
-    // 2) Stock deduction + prepare Ameex product labels from our SKU
+    // 2) Stock deduction + prepare Ameex items
     const stockErrors: string[] = [];
     const stockApplied: string[] = [];
     const ameexItems = [] as Array<{
@@ -63,11 +63,9 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       const productId = matchedProduct?.id ?? null;
 
       ameexItems.push({
-        // Ameex deducts warehouse stock by matching the SKU inside the
-        // `product` field. Send SKU as the label (fallback to name only
-        // if no SKU is configured) so Ameex links the parcel to the
-        // correct warehouse product instead of treating it as a sample.
-        product_name: matchedProduct?.name || item.product_name,
+        // Keep the human-readable order label as the original product name.
+        // Ameex stock matching uses `sku` only inside buildAmeexParcelForm.
+        product_name: item.product_name,
         quantity: item.quantity,
         sku: matchedProduct?.sku ?? null,
       });
