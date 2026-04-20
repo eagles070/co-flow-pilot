@@ -49,6 +49,9 @@ export function buildAmeexParcelForm({
   const codAmount = normalizeAmount(order.total_amount);
 
   form.append("type", "SIMPLE");
+  // Force Ameex to treat parcel as stock-based (link to warehouse stock)
+  // instead of falling back to "sample" mode.
+  form.append("colis_type", "stock");
   form.append("order_num", order.reference);
   // "replace": "false" => brand new parcel (NOUVEAU COLIS).
   form.append("replace", "false");
