@@ -67,11 +67,16 @@ export function buildAmeexParcelForm({
   // parcel to its warehouse stock (instead of treating it as a "sample").
   // Lines without a SKU are skipped here — the call-center handler already
   // surfaces a missing-SKU warning to the agent via stockErrors.
+  // Debug each incoming item
+  items.forEach((item) => {
+    console.log("[ameex] ITEM DEBUG:", item);
+  });
+
   for (const item of items) {
     const sku = item.sku?.trim();
     if (!sku) {
       console.warn(
-        `[ameex] Skipping line item without SKU: "${item.product_name}" (qty ${item.quantity}). Parcel will be created without it linked to warehouse stock.`,
+        `[ameex] Missing SKU for product: "${item.product_name}" (qty ${item.quantity}). Skipping produit/quantite for this line.`,
       );
       continue;
     }
@@ -87,6 +92,11 @@ export function buildAmeexParcelForm({
 
   if (codAmount > 0) {
     form.append("CRBT", "0");
+  }
+
+  // Debug final form payload sent to Ameex
+  for (const pair of form.entries()) {
+    console.log("[ameex] AMEEX FIELD:", pair[0], "=", pair[1]);
   }
 
   return form;
