@@ -151,6 +151,10 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       items: ameexItems,
       provider,
     });
+    const requestFields = Array.from(form.entries()).map(([key, value]) => ({
+      key,
+      value: String(value),
+    }));
 
     const url = `${provider.base_url}/customer/Delivery/Parcels/Action/Type/Add`;
 
@@ -173,6 +177,13 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
         endpoint: url,
         status: "error",
         error: err?.message || "Network error",
+        payload: {
+          request: {
+            order_id: order.id,
+            items: ameexItems,
+            fields: requestFields,
+          },
+        },
       });
       return {
         ok: false,
@@ -200,6 +211,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
         request: {
           order_id: order.id,
           items: ameexItems,
+          fields: requestFields,
         },
         response: parsed,
       },
