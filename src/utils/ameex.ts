@@ -27,12 +27,6 @@ function normalizeAmount(value: number | string) {
   return Math.max(0, amount);
 }
 
-function getAmeexItemLabel(item: AmeexItem) {
-  const sku = item.sku?.trim();
-  const name = item.product_name?.trim() || "Product";
-  return sku ? `[${sku}] ${name}` : name;
-}
-
 export function getAmeexBusinessId(provider: AmeexProvider): string | null {
   const businessId = provider.business_id?.trim();
   if (businessId) return businessId;
@@ -51,14 +45,12 @@ export function buildAmeexParcelForm({
   provider: AmeexProvider;
 }) {
   const form = new FormData();
-  const productLabel = items.map((item) => `${getAmeexItemLabel(item)} x${item.quantity}`).join(", ") || "Order";
   const businessId = getAmeexBusinessId(provider);
   const codAmount = normalizeAmount(order.total_amount);
 
   form.append("type", "SIMPLE");
   form.append("order_num", order.reference);
   // "replace": "false" => brand new parcel (NOUVEAU COLIS).
-  // "true" was tagging every parcel as ÉCHANGE (exchange) on Ameex.
   form.append("replace", "false");
   form.append("open", "YES");
   form.append("try", "NO");
@@ -70,7 +62,23 @@ export function buildAmeexParcelForm({
   form.append("city", cityValue);
   form.append("address", order.shipping_address || "N/A");
   form.append("comment", order.notes || "");
-  form.append("product", productLabel);
+
+  // Send each line item as paired produit/quantite fields so Ameex links the
+  // parcel to its warehouse stock (instead of treating it as a "sample").
+  // Lines without a SKU are skipped here — the call-center handler already
+  // surfaces a missing-SKU warning to the agent via stockErrors.
+  for (const item of items) {
+    const sku = item.sku?.trim();
+    if (!sku) {
+      console.warn(
+        `[ameex] Skipping line item without SKU: "${item.product_name}" (qty ${item.quantity}). Parcel will be created without it linked to warehouse stock.`,
+      );
+      continue;
+    }
+    form.append("produit", sku);
+    form.append("quantite", String(item.quantity));
+  }
+
   form.append("cod", String(codAmount));
 
   if (businessId) {
