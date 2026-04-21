@@ -52,6 +52,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     // 2) Stock deduction + prepare Ameex items
     const stockErrors: string[] = [];
     const stockApplied: string[] = [];
+    const ameexSkuErrors: string[] = [];
     const ameexItems = [] as Array<{
       product_name: string;
       quantity: number;
@@ -69,6 +70,10 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
         quantity: item.quantity,
         sku: matchedProduct?.sku ?? null,
       });
+
+      if (!matchedProduct?.sku?.trim()) {
+        ameexSkuErrors.push(`Missing SKU for "${item.product_name}"`);
+      }
 
       if (!productId) {
         stockErrors.push(`No product found for SKU/name "${item.product_name}"`);
@@ -90,6 +95,17 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       } else {
         stockApplied.push(matchedProduct?.sku?.trim() || item.product_name);
       }
+    }
+
+    if (ameexSkuErrors.length > 0) {
+      return {
+        ok: false,
+        stock: { applied: stockApplied, errors: stockErrors },
+        ameex: {
+          ok: false,
+          error: `Parcel blocked: ${ameexSkuErrors.join(", ")}. Match each order item to a product with a valid SKU before sending to Ameex.`,
+        },
+      };
     }
 
     // 3) Pick active Ameex provider
