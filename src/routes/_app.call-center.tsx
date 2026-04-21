@@ -105,7 +105,7 @@ function CallCenterPage() {
   const timerRef = useRef<number | null>(null);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Initial setup: max attempts + stores list (for edit dialog) + dynamic statuses
+  // Initial setup: max attempts + stores list (for edit dialog) + dynamic statuses + Ameex provider check
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "nrp_max_attempts").maybeSingle()
       .then(({ data }) => { if (data?.value) setMaxAttempts(Number(data.value) || 3); });
@@ -113,6 +113,18 @@ function CallCenterPage() {
       .then(({ data }) => setStores((data ?? []) as StoreOpt[]));
     supabase.from("status_configs").select("key, label, color").eq("is_active", true).order("sort_order")
       .then(({ data }) => setStatuses((data ?? []) as StatusOpt[]));
+    supabase.from("delivery_providers")
+      .select("business_id")
+      .eq("provider_type", "ameex")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) setAmeexWarning("missing_provider");
+        else if (!data.business_id?.trim()) setAmeexWarning("missing_business_id");
+        else setAmeexWarning(null);
+      });
   }, []);
 
   // Count pending orders for the start screen badge
