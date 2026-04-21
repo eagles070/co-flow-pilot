@@ -514,6 +514,7 @@ function DeliveryTab({
   const [providerType, setProviderType] = useState("ameex");
   const [apiId, setApiId] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [businessId, setBusinessId] = useState("");
   const [baseApi, setBaseApi] = useState("https://api.ameex.app");
 
   const [editOpen, setEditOpen] = useState(false);
@@ -522,6 +523,7 @@ function DeliveryTab({
   const [editProviderType, setEditProviderType] = useState("ameex");
   const [editApiId, setEditApiId] = useState("");
   const [editApiKey, setEditApiKey] = useState("");
+  const [editBusinessId, setEditBusinessId] = useState("");
   const [editBaseApi, setEditBaseApi] = useState("https://api.ameex.app");
 
   const create = useServerFn(createDeliveryProvider);
@@ -535,6 +537,7 @@ function DeliveryTab({
     setEditProviderType(p.provider_type ?? "ameex");
     setEditApiId(p.api_id ?? "");
     setEditApiKey(p.api_key ?? "");
+    setEditBusinessId(p.business_id ?? "");
     setEditBaseApi(p.base_url ?? "https://api.ameex.app");
     setEditOpen(true);
   };
@@ -547,6 +550,7 @@ function DeliveryTab({
           provider_type: providerType,
           api_id: apiId,
           api_key: apiKey,
+          business_id: businessId,
           base_url: baseApi,
         },
       }),
@@ -555,6 +559,7 @@ function DeliveryTab({
       setOpen(false);
       setApiId("");
       setApiKey("");
+      setBusinessId("");
       onChange();
     },
     onError: (e: any) => toast.error(e.message),
@@ -569,6 +574,7 @@ function DeliveryTab({
           provider_type: editProviderType,
           api_id: editApiId,
           api_key: editApiKey,
+          business_id: editBusinessId,
           base_url: editBaseApi,
         },
       }),
@@ -714,6 +720,14 @@ function DeliveryTab({
               />
             </div>
             <div>
+              <Label>Business ID</Label>
+              <Input
+                value={businessId}
+                onChange={(e) => setBusinessId(e.target.value)}
+                placeholder="Exact Ameex business ID"
+              />
+            </div>
+            <div>
               <Label>Base URL</Label>
               <Input value={baseApi} onChange={(e) => setBaseApi(e.target.value)} />
             </div>
@@ -761,6 +775,14 @@ function DeliveryTab({
             <div>
               <Label>API Key</Label>
               <Input value={editApiKey} onChange={(e) => setEditApiKey(e.target.value)} />
+            </div>
+            <div>
+              <Label>Business ID</Label>
+              <Input
+                value={editBusinessId}
+                onChange={(e) => setEditBusinessId(e.target.value)}
+                placeholder="Exact Ameex business ID"
+              />
             </div>
             <div>
               <Label>Base URL</Label>

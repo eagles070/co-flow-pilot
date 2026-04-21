@@ -137,6 +137,18 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       };
     }
 
+    if (!provider.business_id?.trim()) {
+      return {
+        ok: false,
+        stock: { applied: stockApplied, errors: stockErrors },
+        ameex: {
+          ok: false,
+          error:
+            "Ameex Business ID is missing in the delivery provider settings. Add the exact Business ID from Ameex before sending so the parcel is treated as stock, not sample.",
+        },
+      };
+    }
+
     // 4) Resolve Ameex city ID from our cities table (matched by name)
     let ameexCityId: string | null = null;
     if (order.city) {

@@ -295,6 +295,7 @@ export const createDeliveryProvider = createServerFn({ method: "POST" })
       provider_type: string;
       api_id: string;
       api_key: string;
+      business_id?: string;
       base_url?: string;
     }) => {
       if (!input.name || !input.api_id || !input.api_key)
@@ -312,6 +313,7 @@ export const createDeliveryProvider = createServerFn({ method: "POST" })
         provider_type: data.provider_type || "ameex",
         api_id: data.api_id,
         api_key: data.api_key,
+        business_id: data.business_id?.trim() || null,
         base_url: data.base_url || "https://api.ameex.app",
         webhook_token,
         created_by: context.userId,
@@ -331,6 +333,7 @@ export const updateDeliveryProvider = createServerFn({ method: "POST" })
       provider_type?: string;
       api_id?: string;
       api_key?: string;
+      business_id?: string;
       base_url?: string;
     }) => {
       if (!input.id) throw new Error("Provider id required");
@@ -344,6 +347,7 @@ export const updateDeliveryProvider = createServerFn({ method: "POST" })
     if (data.provider_type !== undefined) patch.provider_type = data.provider_type;
     if (data.api_id !== undefined) patch.api_id = data.api_id;
     if (data.api_key !== undefined) patch.api_key = data.api_key;
+    if (data.business_id !== undefined) patch.business_id = data.business_id.trim() || null;
     if (data.base_url !== undefined) patch.base_url = data.base_url;
     patch.updated_at = new Date().toISOString();
 
