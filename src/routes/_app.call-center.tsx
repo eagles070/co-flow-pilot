@@ -363,6 +363,24 @@ function CallCenterPage() {
         }
       />
 
+      {ameexWarning && (
+        <div className="mt-3 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex-1">
+            <div className="font-medium">
+              {ameexWarning === "missing_provider"
+                ? "No active Ameex delivery provider configured"
+                : "Ameex Business ID is missing"}
+            </div>
+            <div className="text-xs text-destructive/80">
+              {ameexWarning === "missing_provider"
+                ? "Confirmed orders will not be sent to Ameex. Add an Ameex provider in Integrations → Delivery providers."
+                : "Without a Business ID, Ameex will treat parcels as samples instead of stock orders. Open Integrations → Delivery providers and fill the Business ID exactly as shown in Ameex."}
+            </div>
+          </div>
+        </div>
+      )}
+
       <Tabs defaultValue="queue" className="mt-2">
         <TabsList>
           <TabsTrigger value="queue"><PhoneCall className="mr-1.5 h-4 w-4" />Queue</TabsTrigger>
