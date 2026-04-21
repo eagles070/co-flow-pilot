@@ -91,6 +91,7 @@ function CallCenterPage() {
   const [editOpen, setEditOpen] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<StatusOpt[]>([]);
   const [dropdownStatus, setDropdownStatus] = useState<string>("");
+  const [ameexWarning, setAmeexWarning] = useState<null | "missing_provider" | "missing_business_id">(null);
 
   const [note, setNote] = useState("");
   const [recallAt, setRecallAt] = useState("");
@@ -104,7 +105,7 @@ function CallCenterPage() {
   const timerRef = useRef<number | null>(null);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Initial setup: max attempts + stores list (for edit dialog) + dynamic statuses
+  // Initial setup: max attempts + stores list (for edit dialog) + dynamic statuses + Ameex provider check
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "nrp_max_attempts").maybeSingle()
       .then(({ data }) => { if (data?.value) setMaxAttempts(Number(data.value) || 3); });
@@ -112,6 +113,18 @@ function CallCenterPage() {
       .then(({ data }) => setStores((data ?? []) as StoreOpt[]));
     supabase.from("status_configs").select("key, label, color").eq("is_active", true).order("sort_order")
       .then(({ data }) => setStatuses((data ?? []) as StatusOpt[]));
+    supabase.from("delivery_providers")
+      .select("business_id")
+      .eq("provider_type", "ameex")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) setAmeexWarning("missing_provider");
+        else if (!data.business_id?.trim()) setAmeexWarning("missing_business_id");
+        else setAmeexWarning(null);
+      });
   }, []);
 
   // Count pending orders for the start screen badge
@@ -349,6 +362,24 @@ function CallCenterPage() {
           )
         }
       />
+
+      {ameexWarning && (
+        <div className="mt-3 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex-1">
+            <div className="font-medium">
+              {ameexWarning === "missing_provider"
+                ? "No active Ameex delivery provider configured"
+                : "Ameex Business ID is missing"}
+            </div>
+            <div className="text-xs text-destructive/80">
+              {ameexWarning === "missing_provider"
+                ? "Confirmed orders will not be sent to Ameex. Add an Ameex provider in Integrations → Delivery providers."
+                : "Without a Business ID, Ameex will treat parcels as samples instead of stock orders. Open Integrations → Delivery providers and fill the Business ID exactly as shown in Ameex."}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="queue" className="mt-2">
         <TabsList>
