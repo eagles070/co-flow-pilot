@@ -11,21 +11,30 @@ export type MatchedProduct = {
   name: string;
 };
 
+function normalizeProductText(value: string | null | undefined) {
+  return (value ?? "")
+    .normalize("NFKC")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function buildLooseNamePattern(value: string) {
+  const tokens = normalizeProductText(value)
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+
+  return tokens.length ? `%${tokens.join("%")}%` : null;
+}
+
 export async function resolveProductForOrderItem(
   db: any,
   item: CallCenterOrderItem,
 ): Promise<MatchedProduct | null> {
-  const itemLabel = item.product_name?.trim();
-
-  if (itemLabel) {
-    const { data: bySku } = await db
-      .from("products")
-      .select("id, sku, name")
-      .eq("sku", itemLabel)
-      .maybeSingle();
-
-    if (bySku) return bySku;
-  }
+  const rawItemLabel = item.product_name?.trim() || "";
+  const normalizedItemLabel = normalizeProductText(rawItemLabel);
+  const looseNamePattern = buildLooseNamePattern(rawItemLabel);
 
   if (item.product_id) {
     const { data: byId } = await db
@@ -37,14 +46,40 @@ export async function resolveProductForOrderItem(
     if (byId) return byId;
   }
 
-  if (itemLabel) {
+  if (rawItemLabel) {
+    const { data: bySku } = await db
+      .from("products")
+      .select("id, sku, name")
+      .eq("sku", rawItemLabel)
+      .maybeSingle();
+
+    if (bySku) return bySku;
+  }
+
+  if (rawItemLabel) {
     const { data: byName } = await db
       .from("products")
       .select("id, sku, name")
-      .eq("name", itemLabel)
+      .eq("name", rawItemLabel)
       .maybeSingle();
 
     if (byName) return byName;
+  }
+
+  if (looseNamePattern) {
+    const { data: fuzzyMatches } = await db
+      .from("products")
+      .select("id, sku, name")
+      .ilike("name", looseNamePattern)
+      .limit(10);
+
+    const normalizedMatch = fuzzyMatches?.find(
+      (product: MatchedProduct) => normalizeProductText(product.name) === normalizedItemLabel,
+    );
+
+    if (normalizedMatch) return normalizedMatch;
+
+    if (fuzzyMatches?.length === 1) return fuzzyMatches[0];
   }
 
   return null;
