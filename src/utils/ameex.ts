@@ -31,8 +31,7 @@ export function getAmeexBusinessId(provider: AmeexProvider): string | null {
   const businessId = provider.business_id?.trim();
   if (businessId) return businessId;
 
-  const apiId = provider.api_id?.trim();
-  return apiId || null;
+  return null;
 }
 
 export function buildAmeexParcelForm({
@@ -47,6 +46,10 @@ export function buildAmeexParcelForm({
   const form = new FormData();
   const businessId = getAmeexBusinessId(provider);
   const codAmount = normalizeAmount(order.total_amount);
+
+  if (!businessId) {
+    console.warn("[ameex] Missing business_id on provider. Parcel may be classified incorrectly unless Ameex Business ID is configured.");
+  }
 
   // Ameex stock-based parcels should use numeric type "1".
   // `SIMPLE` was still being classified as a sample on their side.
