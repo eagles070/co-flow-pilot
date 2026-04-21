@@ -91,6 +91,7 @@ function CallCenterPage() {
   const [editOpen, setEditOpen] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<StatusOpt[]>([]);
   const [dropdownStatus, setDropdownStatus] = useState<string>("");
+  const [ameexWarning, setAmeexWarning] = useState<null | "missing_provider" | "missing_business_id">(null);
 
   const [note, setNote] = useState("");
   const [recallAt, setRecallAt] = useState("");
