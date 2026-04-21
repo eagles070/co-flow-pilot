@@ -720,6 +720,14 @@ function DeliveryTab({
               />
             </div>
             <div>
+              <Label>Business ID</Label>
+              <Input
+                value={businessId}
+                onChange={(e) => setBusinessId(e.target.value)}
+                placeholder="Exact Ameex business ID"
+              />
+            </div>
+            <div>
               <Label>Base URL</Label>
               <Input value={baseApi} onChange={(e) => setBaseApi(e.target.value)} />
             </div>
@@ -767,6 +775,14 @@ function DeliveryTab({
             <div>
               <Label>API Key</Label>
               <Input value={editApiKey} onChange={(e) => setEditApiKey(e.target.value)} />
+            </div>
+            <div>
+              <Label>Business ID</Label>
+              <Input
+                value={editBusinessId}
+                onChange={(e) => setEditBusinessId(e.target.value)}
+                placeholder="Exact Ameex business ID"
+              />
             </div>
             <div>
               <Label>Base URL</Label>
