@@ -47,8 +47,10 @@ import {
   PackageX,
   AlertTriangle,
   TrendingUp,
+  Package as PackageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 
 export const Route = createFileRoute("/_app/products")({
   component: ProductsPage,
@@ -340,7 +342,7 @@ function ProductsPage() {
     id ? suppliers.find((s) => s.id === id)?.name ?? "—" : "—";
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Products & Stock"
         description="Single source of truth for your catalog, stock levels and product performance."
@@ -351,6 +353,13 @@ function ProductsPage() {
             </Button>
           )
         }
+      />
+
+      <SectionHeader
+        icon={PackageIcon}
+        title="Catalog & Inventory"
+        description="Manage your product catalog and live stock levels"
+        variant="luxury"
       />
 
       {/* Alerts */}
