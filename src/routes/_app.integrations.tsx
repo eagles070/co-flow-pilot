@@ -43,6 +43,7 @@ import {
   testShopifyWebhook,
   createSheetsIntegration,
   deleteSheetsIntegration,
+  syncSheetNow,
   createDeliveryProvider,
   updateDeliveryProvider,
   deleteDeliveryProvider,
