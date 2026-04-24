@@ -563,21 +563,24 @@ function OrdersPage() {
                         <Checkbox checked={selected.has(o.id)} onCheckedChange={() => toggleOne(o.id)} />
                       </TableCell>
                     )}
-                    <TableCell className="font-mono text-xs">{o.reference}</TableCell>
+                    <TableCell className="text-xs font-medium">
+                      {o.agent_id ? agentName(o.agent_id) : o.reference}
+                    </TableCell>
                     <TableCell className="font-medium">{o.customer_name}</TableCell>
                     <TableCell className="tabular-nums">{o.customer_phone}</TableCell>
                     <TableCell>{o.city ?? "—"}</TableCell>
-                    <TableCell className="max-w-[180px] text-sm">
+                    <TableCell className="max-w-[220px] text-sm">
                       {o.order_items && o.order_items.length > 0 ? (
-                        <div
-                          className="truncate"
-                          title={o.order_items.map((it) => `${it.quantity}× ${it.product_name}`).join(", ")}
-                        >
-                          <span className="text-muted-foreground">{o.order_items[0].quantity}×</span>{" "}
-                          {o.order_items[0].product_name}
-                          {o.order_items.length > 1 && (
-                            <span className="ml-1 text-xs text-muted-foreground">
-                              +{o.order_items.length - 1}
+                        <div className="space-y-1" title={o.order_items.map((it) => `${it.quantity}× ${it.product_name}`).join(", ")}>
+                          {o.order_items.slice(0, 2).map((it, index) => (
+                            <div key={`${o.id}-${index}`} className="truncate">
+                              <span className="text-muted-foreground">{it.quantity}×</span>{" "}
+                              {it.product_name}
+                            </div>
+                          ))}
+                          {o.order_items.length > 2 && (
+                            <span className="text-xs text-muted-foreground">
+                              +{o.order_items.length - 2} autre(s)
                             </span>
                           )}
                         </div>
