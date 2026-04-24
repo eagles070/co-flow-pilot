@@ -89,13 +89,13 @@ export const listIntegrations = createServerFn({ method: "GET" })
 
 export const createShopifyStore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name: string; domain: string }) => {
+  .inputValidator((input: { name: string; domain: string; webhook_secret?: string }) => {
     if (!input.name || !input.domain) throw new Error("Name and domain required");
     return input;
   })
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
-    const webhook_secret = randomToken(24);
+    const webhook_secret = data.webhook_secret?.trim() || randomToken(24);
     const { data: row, error } = await context.supabase
       .from("shopify_stores")
       .insert({
