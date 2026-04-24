@@ -229,25 +229,29 @@ export const createSheetsIntegration = createServerFn({ method: "POST" })
   .inputValidator(
     (input: {
       name: string;
-      direction: "import" | "export";
-      spreadsheet_id: string;
-      sheet_name: string;
-      column_mapping: Record<string, string>;
+      direction: "import" | "export" | "both";
+      spreadsheet_id?: string;
+      sheet_name?: string;
+      column_mapping?: Record<string, string>;
     }) => {
-      if (!input.name || !input.spreadsheet_id) throw new Error("Name and spreadsheet ID required");
+      if (!input.name) throw new Error("Name required");
       return input;
     },
   )
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase, context.userId);
+    const mapping = {
+      ...(data.column_mapping ?? {}),
+      webhook_token: randomToken(16),
+    };
     const { data: row, error } = await context.supabase
       .from("google_sheets_integrations")
       .insert({
         name: data.name,
-        direction: data.direction,
-        spreadsheet_id: data.spreadsheet_id,
-        sheet_name: data.sheet_name || "Sheet1",
-        column_mapping: data.column_mapping ?? {},
+        direction: data.direction === "both" ? "import" : data.direction,
+        spreadsheet_id: data.spreadsheet_id || "",
+        sheet_name: data.sheet_name || "Commandes",
+        column_mapping: mapping,
         created_by: context.userId,
       })
       .select()
