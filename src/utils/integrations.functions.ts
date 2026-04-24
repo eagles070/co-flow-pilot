@@ -110,6 +110,78 @@ export const createShopifyStore = createServerFn({ method: "POST" })
     return row;
   });
 
+export const testShopifyWebhook = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; base_url: string }) => {
+    if (!input.id) throw new Error("Store id required");
+    if (!input.base_url) throw new Error("Base URL required");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const db = context.supabase;
+
+    const { data: store, error } = await db
+      .from("shopify_stores")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (error || !store) throw new Error("Store not found");
+
+    // Build a minimal Shopify-like order payload
+    const samplePayload = {
+      id: `test-${Date.now()}`,
+      total_price: "0.00",
+      customer: { first_name: "Webhook", last_name: "Test", phone: "" },
+      shipping_address: {
+        name: "Webhook Test",
+        phone: "",
+        city: "Test City",
+        province: null,
+        address1: "Test address",
+        address2: null,
+      },
+      line_items: [],
+    };
+    const body = JSON.stringify(samplePayload);
+
+    // Sign with the store's secret so the webhook accepts it
+    const cryptoMod = await import("crypto");
+    const signature = cryptoMod
+      .createHmac("sha256", store.webhook_secret)
+      .update(body, "utf8")
+      .digest("base64");
+
+    const url = `${data.base_url.replace(/\/$/, "")}/api/webhooks/shopify/${store.id}`;
+
+    let httpStatus = 0;
+    let responseText = "";
+    let networkError: string | undefined;
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-shopify-hmac-sha256": signature,
+          "x-shopify-topic": "orders/create",
+        },
+        body,
+      });
+      httpStatus = res.status;
+      responseText = (await res.text()).slice(0, 500);
+    } catch (err: any) {
+      networkError = err?.message ?? "Network error";
+    }
+
+    return {
+      url,
+      http_status: httpStatus,
+      body: responseText,
+      error: networkError,
+    };
+  });
+
 export const deleteShopifyStore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { id: string }) => input)
