@@ -51,6 +51,18 @@ async function logIntegration(supabase: any, entry: {
   }
 }
 
+async function getAgentDisplayName(supabase: any, userId: string | null | undefined) {
+  if (!userId) return null;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return data?.full_name?.trim() || data?.email?.trim() || null;
+}
+
 // =================== LISTS ===================
 
 export const listIntegrations = createServerFn({ method: "GET" })
@@ -536,12 +548,24 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
     if (!provider) throw new Error("Provider not found");
 
     const items = (order.order_items as any[]) ?? [];
-    const form = buildAmeexParcelForm({ order, items, provider });
+    const agentDisplayName = await getAgentDisplayName(db, order.agent_id);
+    const form = buildAmeexParcelForm({
+      order: {
+        ...order,
+        ameex_order_label: agentDisplayName || order.reference,
+      },
+      items,
+      provider,
+    });
 
     const url = `${provider.base_url}/customer/Delivery/Parcels/Action/Type/Add`;
     const res = await fetch(url, {
       method: "POST",
-      headers: { "C-Api-Id": provider.api_id, "C-Api-Key": provider.api_key },
+      headers: {
+        "C-Api-Id": provider.api_id,
+        "C-Api-Key": provider.api_key,
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
       body: form,
     });
     const text = await res.text();
