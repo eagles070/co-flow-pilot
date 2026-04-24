@@ -43,8 +43,11 @@ import {
   Wallet,
   Upload,
   ImageIcon,
+  Factory,
 } from "lucide-react";
 import { toast } from "sonner";
+import { KpiCard } from "@/components/dashboard/KpiCard";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 
 export const Route = createFileRoute("/_app/sourcing")({
   component: SourcingPage,
@@ -347,7 +350,7 @@ function SourcingPage() {
   const formRemaining = formTotal - (Number(form.amount_paid) || 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Sourcing"
         description="Track product purchases, payments, and shipments before stock arrives"
@@ -358,22 +361,34 @@ function SourcingPage() {
         }
       />
 
+      <SectionHeader
+        icon={Factory}
+        title="Procurement Pipeline"
+        description="Monitor outstanding payments and incoming inventory"
+        variant="primary"
+      />
+
       <div className="grid gap-4 sm:grid-cols-3">
-        <SummaryCard
-          icon={<Package className="h-4 w-4" />}
-          label="Total Purchases Value"
-          value={totals.totalCost}
+        <KpiCard
+          icon={Package}
+          label="Total purchases value"
+          value={totals.totalCost.toFixed(2)}
+          tone="luxury-1"
+          hint="committed spend"
         />
-        <SummaryCard
-          icon={<DollarSign className="h-4 w-4" />}
-          label="Total Paid"
-          value={totals.totalPaid}
+        <KpiCard
+          icon={DollarSign}
+          label="Total paid"
+          value={totals.totalPaid.toFixed(2)}
+          tone="luxury-4"
+          hint="settled with suppliers"
         />
-        <SummaryCard
-          icon={<Wallet className="h-4 w-4" />}
-          label="Total Remaining"
-          value={totals.totalRemaining}
-          tone={totals.totalRemaining > 0 ? "warning" : "default"}
+        <KpiCard
+          icon={Wallet}
+          label="Total remaining"
+          value={totals.totalRemaining.toFixed(2)}
+          tone={totals.totalRemaining > 0 ? "luxury-3" : "luxury-4"}
+          hint={totals.totalRemaining > 0 ? "awaiting payment" : "all settled"}
         />
       </div>
 
@@ -778,31 +793,3 @@ function SourcingPage() {
   );
 }
 
-function SummaryCard({
-  icon,
-  label,
-  value,
-  tone = "default",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  tone?: "default" | "warning";
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          {icon} {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div
-          className={`text-2xl font-semibold ${tone === "warning" && value > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}
-        >
-          {value.toFixed(2)}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
