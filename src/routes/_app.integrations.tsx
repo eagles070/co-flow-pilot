@@ -219,21 +219,32 @@ function ShopifyTab({
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 space-y-2">
+        <div className="mb-4 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 space-y-3">
           <div className="flex items-start gap-3">
             <div className="rounded-xl bg-primary/15 p-2">
               <AlertCircle className="h-4 w-4 text-primary" />
             </div>
-            <div className="space-y-1 text-sm">
-              <div className="font-semibold">Where do I paste the webhook in Shopify?</div>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Shopify does <strong>not</strong> have a "Test webhook" button. Each store below
-                shows its <strong>Webhook URL</strong> and <strong>HMAC secret</strong> — copy
-                them into Shopify Admin → <strong>Settings → Notifications</strong> → scroll to{" "}
-                <strong>Webhooks</strong> → <em>Create webhook</em>. Pick event{" "}
-                <strong>Order creation</strong>, format <strong>JSON</strong>, then paste the URL.
-                When done, click <strong>Test webhook</strong> below to verify it works.
-              </p>
+            <div className="space-y-2 text-sm flex-1">
+              <div className="font-semibold">How Shopify webhooks work with this CRM</div>
+              <ol className="text-muted-foreground text-xs leading-relaxed space-y-1.5 list-decimal list-inside">
+                <li>
+                  <strong className="text-foreground">In your CRM (here):</strong> Add the store
+                  below. We give you a <strong>Webhook URL</strong> like{" "}
+                  <code className="font-mono">/api/webhooks/shopify/&lt;store-id&gt;</code>.
+                </li>
+                <li>
+                  <strong className="text-foreground">In Shopify Admin:</strong> Go to{" "}
+                  <strong>Settings → Notifications → Webhooks → Create webhook</strong>. Pick
+                  event <strong>Order creation</strong>, format <strong>JSON</strong>, paste the
+                  CRM URL, then save. Shopify shows a long signing secret at the bottom (e.g.{" "}
+                  <code className="font-mono">1577b79637c87b…</code>).
+                </li>
+                <li>
+                  <strong className="text-foreground">Back here:</strong> Click{" "}
+                  <strong>Paste secret from Shopify</strong> on the store row and paste that
+                  signing secret. Then click <strong>Test webhook</strong> — should return 200.
+                </li>
+              </ol>
             </div>
           </div>
         </div>
