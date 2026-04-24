@@ -141,16 +141,20 @@ function ShopifyTab({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
+  const [createdStore, setCreatedStore] = useState<any | null>(null);
+  const [revealId, setRevealId] = useState<string | null>(null);
   const create = useServerFn(createShopifyStore);
   const del = useServerFn(deleteShopifyStore);
+  const testWebhook = useServerFn(testShopifyWebhook);
 
   const createMut = useMutation({
     mutationFn: () => create({ data: { name, domain } }),
-    onSuccess: () => {
+    onSuccess: (row: any) => {
       toast.success("Shopify store added");
       setOpen(false);
       setName("");
       setDomain("");
+      setCreatedStore(row);
       onChange();
     },
     onError: (e: any) => toast.error(e.message),
@@ -161,6 +165,23 @@ function ShopifyTab({
     onSuccess: () => {
       toast.success("Removed");
       onChange();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const testMut = useMutation({
+    mutationFn: (id: string) => testWebhook({ data: { id, base_url: baseUrl } }),
+    onSuccess: (r: any) => {
+      if (r.error) {
+        toast.error(`Network error: ${r.error}`);
+      } else if (r.http_status >= 200 && r.http_status < 300) {
+        toast.success(`Webhook is live (HTTP ${r.http_status}). A test order was created.`);
+        onChange();
+      } else if (r.http_status === 401) {
+        toast.error("HMAC verification failed (HTTP 401). Secret may be misconfigured.");
+      } else {
+        toast.error(`Webhook responded HTTP ${r.http_status}: ${r.body}`);
+      }
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -185,55 +206,86 @@ function ShopifyTab({
         ) : stores.length === 0 ? (
           <p className="text-sm text-muted-foreground">No Shopify stores connected yet.</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Domain</TableHead>
-                <TableHead>Webhook URL</TableHead>
-                <TableHead>Secret</TableHead>
-                <TableHead>Last sync</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {stores.map((s) => {
-                const url = `${baseUrl}/api/webhooks/shopify/${s.id}`;
-                return (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell>{s.domain}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => copy(url)}>
-                        <Copy className="mr-1 h-3 w-3" /> Copy URL
-                      </Button>
-                    </TableCell>
-                    <TableCell>
+          <div className="space-y-3">
+            {stores.map((s) => {
+              const url = `${baseUrl}/api/webhooks/shopify/${s.id}`;
+              const revealed = revealId === s.id;
+              return (
+                <div
+                  key={s.id}
+                  className="rounded-2xl border border-border/60 bg-muted/30 p-4 space-y-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="font-medium">{s.name}</div>
+                      <div className="text-xs text-muted-foreground">{s.domain}</div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground mr-2">
+                        Last sync: {s.last_sync_at ? new Date(s.last_sync_at).toLocaleString() : "Never"}
+                      </span>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        onClick={() => copy(s.webhook_secret)}
+                        onClick={() => testMut.mutate(s.id)}
+                        disabled={testMut.isPending}
                       >
-                        <Copy className="mr-1 h-3 w-3" /> Copy
+                        <Send className="mr-1 h-3 w-3" />
+                        {testMut.isPending ? "Testing…" : "Test webhook"}
                       </Button>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {s.last_sync_at ? new Date(s.last_sync_at).toLocaleString() : "Never"}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => delMut.mutate(s.id)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setCreatedStore(s)}>
+                        Setup guide
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => delMut.mutate(s.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Webhook URL</Label>
+                      <div className="flex items-center gap-1">
+                        <Input value={url} readOnly className="font-mono text-xs" />
+                        <Button variant="outline" size="icon" onClick={() => copy(url)}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">HMAC secret</Label>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={revealed ? s.webhook_secret : "•".repeat(24)}
+                          readOnly
+                          className="font-mono text-xs"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setRevealId(revealed ? null : s.id)}
+                          title={revealed ? "Hide" : "Reveal"}
+                        >
+                          {revealed ? (
+                            <EyeOff className="h-3.5 w-3.5" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => copy(s.webhook_secret)}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </CardContent>
 
@@ -242,9 +294,9 @@ function ShopifyTab({
           <DialogHeader>
             <DialogTitle>Add Shopify store</DialogTitle>
             <DialogDescription>
-              We'll generate a webhook URL and HMAC secret. Add them in your Shopify admin
-              under <strong>Settings → Notifications → Webhooks</strong> for the
-              "Order creation" event with format JSON.
+              We'll generate a webhook URL and HMAC secret. Add them in your Shopify admin under{" "}
+              <strong>Settings → Notifications → Webhooks</strong> for the "Order creation" event
+              with format JSON.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -271,7 +323,148 @@ function ShopifyTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ShopifySetupDialog
+        store={createdStore}
+        baseUrl={baseUrl}
+        onClose={() => setCreatedStore(null)}
+        onTest={(id) => testMut.mutate(id)}
+        testing={testMut.isPending}
+      />
     </Card>
+  );
+}
+
+function ShopifySetupDialog({
+  store,
+  baseUrl,
+  onClose,
+  onTest,
+  testing,
+}: {
+  store: any | null;
+  baseUrl: string;
+  onClose: () => void;
+  onTest: (id: string) => void;
+  testing: boolean;
+}) {
+  if (!store) return null;
+  const url = `${baseUrl}/api/webhooks/shopify/${store.id}`;
+  const adminUrl = `https://${store.domain}/admin/settings/notifications`;
+
+  return (
+    <Dialog open={!!store} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            Connect this store to Shopify
+          </DialogTitle>
+          <DialogDescription>
+            Follow these 4 steps in your Shopify admin. Total time: ~2 minutes.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm flex gap-2">
+            <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+            <span>
+              Shopify does <strong>not</strong> have a "Test webhook" button inside the admin.
+              Use the <strong>Test webhook</strong> button below — it sends a signed sample
+              order to your endpoint and confirms it works.
+            </span>
+          </div>
+
+          <ol className="space-y-3 text-sm">
+            <li className="rounded-xl border border-border/60 bg-muted/30 p-3">
+              <div className="font-medium mb-1">1. Open Shopify webhooks settings</div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(adminUrl, "_blank")}
+              >
+                <ExternalLink className="mr-1 h-3 w-3" />
+                Open {store.domain}
+              </Button>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Path: Settings → Notifications → scroll to <strong>Webhooks</strong> → Create
+                webhook.
+              </p>
+            </li>
+
+            <li className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
+              <div className="font-medium">2. Configure the webhook</div>
+              <div className="grid gap-2 text-xs">
+                <Field label="Event" value="Order creation" />
+                <Field label="Format" value="JSON" />
+                <Field label="API version" value="Latest stable" />
+                <Field label="URL" value={url} mono copyable />
+              </div>
+            </li>
+
+            <li className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
+              <div className="font-medium">3. Save the HMAC secret</div>
+              <p className="text-xs text-muted-foreground">
+                After saving the webhook, Shopify shows an <strong>HMAC signing secret</strong>{" "}
+                (just under the webhook). Copy it and replace the one we generated below if it
+                differs — or use ours and set it inside Shopify if your plan allows custom
+                secrets. For most stores, Shopify generates the secret itself, so update yours
+                here:
+              </p>
+              <Field label="Our generated secret" value={store.webhook_secret} mono copyable />
+              <p className="text-xs text-muted-foreground">
+                Important: the secret stored here must match what Shopify uses to sign requests,
+                otherwise webhooks will be rejected (401).
+              </p>
+            </li>
+
+            <li className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
+              <div className="font-medium">4. Test the connection</div>
+              <p className="text-xs text-muted-foreground">
+                Click below — we'll POST a signed sample order to your webhook URL and create a
+                test order if everything works.
+              </p>
+              <Button onClick={() => onTest(store.id)} disabled={testing}>
+                <Send className="mr-1 h-3 w-3" />
+                {testing ? "Testing…" : "Test webhook now"}
+              </Button>
+            </li>
+          </ol>
+        </div>
+
+        <DialogFooter>
+          <Button onClick={onClose}>Done</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Field({
+  label,
+  value,
+  mono,
+  copyable,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  copyable?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-32 shrink-0 text-muted-foreground">{label}:</span>
+      <Input
+        value={value}
+        readOnly
+        className={`h-8 ${mono ? "font-mono text-xs" : "text-xs"}`}
+      />
+      {copyable && (
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => copy(value)}>
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
   );
 }
 
