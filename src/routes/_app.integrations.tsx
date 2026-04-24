@@ -143,6 +143,7 @@ function ShopifyTab({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
+  const [newSecret, setNewSecret] = useState("");
   const [createdStore, setCreatedStore] = useState<any | null>(null);
   const [revealId, setRevealId] = useState<string | null>(null);
   const [editSecretFor, setEditSecretFor] = useState<any | null>(null);
@@ -153,12 +154,14 @@ function ShopifyTab({
   const testWebhook = useServerFn(testShopifyWebhook);
 
   const createMut = useMutation({
-    mutationFn: () => create({ data: { name, domain } }),
+    mutationFn: () =>
+      create({ data: { name, domain, webhook_secret: newSecret || undefined } }),
     onSuccess: (row: any) => {
-      toast.success("Shopify store added");
+      toast.success("Boutique Shopify ajoutée");
       setOpen(false);
       setName("");
       setDomain("");
+      setNewSecret("");
       setCreatedStore(row);
       onChange();
     },
