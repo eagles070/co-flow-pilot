@@ -608,6 +608,7 @@ function SheetsTab({
 
   const create = useServerFn(createSheetsIntegration);
   const del = useServerFn(deleteSheetsIntegration);
+  const sync = useServerFn(syncSheetNow);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -627,6 +628,19 @@ function SheetsTab({
       setOpen(false);
       setName("");
       setSpreadsheetId("");
+      onChange();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const syncMut = useMutation({
+    mutationFn: (id: string) => sync({ data: { id } }),
+    onSuccess: (r: any) => {
+      toast.success(
+        r?.imported
+          ? `${r.imported} nouvelle(s) commande(s) importée(s)`
+          : "Sync terminée — aucune nouvelle ligne",
+      );
       onChange();
     },
     onError: (e: any) => toast.error(e.message),
