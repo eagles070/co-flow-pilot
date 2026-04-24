@@ -9,6 +9,16 @@ import {
 } from "@/utils/ameex";
 import { resolveProductForOrderItem } from "@/utils/call-center.helpers";
 
+async function resolveAgentDisplayName(db: any, userId: string) {
+  const { data } = await db
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return data?.full_name?.trim() || data?.email?.trim() || null;
+}
+
 /**
  * Confirm an order:
  *  1. Deduct stock for each line item (matched by SKU first, then product_id, then product_name)
@@ -174,8 +184,14 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     }
 
     // 5) Push to Ameex
+    const agentDisplayName = await resolveAgentDisplayName(db, userId);
+
     const form = buildAmeexParcelForm({
-      order: { ...order, ameex_city_id: ameexCityId } as any,
+      order: {
+        ...order,
+        ameex_city_id: ameexCityId,
+        ameex_order_label: agentDisplayName || order.reference,
+      } as any,
       items: ameexItems,
       provider,
     });
@@ -192,7 +208,11 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     try {
       res = await fetch(url, {
         method: "POST",
-        headers: { "C-Api-Id": provider.api_id, "C-Api-Key": provider.api_key },
+        headers: {
+          "C-Api-Id": provider.api_id,
+          "C-Api-Key": provider.api_key,
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        },
         body: form,
       });
       text = await res.text();
