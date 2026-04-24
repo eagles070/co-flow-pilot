@@ -39,6 +39,7 @@ import { ShoppingBag, FileSpreadsheet, Truck, Copy, RefreshCw, Trash2, Send, Plu
 import {
   listIntegrations,
   createShopifyStore,
+  updateShopifyStore,
   deleteShopifyStore,
   testShopifyWebhook,
   createSheetsIntegration,
@@ -49,6 +50,7 @@ import {
   deleteDeliveryProvider,
   testDeliveryProvider,
 } from "@/utils/integrations.functions";
+
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/integrations")({
@@ -143,7 +145,10 @@ function ShopifyTab({
   const [domain, setDomain] = useState("");
   const [createdStore, setCreatedStore] = useState<any | null>(null);
   const [revealId, setRevealId] = useState<string | null>(null);
+  const [editSecretFor, setEditSecretFor] = useState<any | null>(null);
+  const [secretInput, setSecretInput] = useState("");
   const create = useServerFn(createShopifyStore);
+  const update = useServerFn(updateShopifyStore);
   const del = useServerFn(deleteShopifyStore);
   const testWebhook = useServerFn(testShopifyWebhook);
 
@@ -169,6 +174,18 @@ function ShopifyTab({
     onError: (e: any) => toast.error(e.message),
   });
 
+  const updateSecretMut = useMutation({
+    mutationFn: (vars: { id: string; webhook_secret: string }) =>
+      update({ data: vars }),
+    onSuccess: () => {
+      toast.success("Secret updated. Now test the webhook.");
+      setEditSecretFor(null);
+      setSecretInput("");
+      onChange();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const testMut = useMutation({
     mutationFn: (id: string) => testWebhook({ data: { id, base_url: baseUrl } }),
     onSuccess: (r: any) => {
@@ -186,6 +203,7 @@ function ShopifyTab({
     onError: (e: any) => toast.error(e.message),
   });
 
+
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
@@ -201,21 +219,32 @@ function ShopifyTab({
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 space-y-2">
+        <div className="mb-4 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 space-y-3">
           <div className="flex items-start gap-3">
             <div className="rounded-xl bg-primary/15 p-2">
               <AlertCircle className="h-4 w-4 text-primary" />
             </div>
-            <div className="space-y-1 text-sm">
-              <div className="font-semibold">Where do I paste the webhook in Shopify?</div>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Shopify does <strong>not</strong> have a "Test webhook" button. Each store below
-                shows its <strong>Webhook URL</strong> and <strong>HMAC secret</strong> — copy
-                them into Shopify Admin → <strong>Settings → Notifications</strong> → scroll to{" "}
-                <strong>Webhooks</strong> → <em>Create webhook</em>. Pick event{" "}
-                <strong>Order creation</strong>, format <strong>JSON</strong>, then paste the URL.
-                When done, click <strong>Test webhook</strong> below to verify it works.
-              </p>
+            <div className="space-y-2 text-sm flex-1">
+              <div className="font-semibold">How Shopify webhooks work with this CRM</div>
+              <ol className="text-muted-foreground text-xs leading-relaxed space-y-1.5 list-decimal list-inside">
+                <li>
+                  <strong className="text-foreground">In your CRM (here):</strong> Add the store
+                  below. We give you a <strong>Webhook URL</strong> like{" "}
+                  <code className="font-mono">/api/webhooks/shopify/&lt;store-id&gt;</code>.
+                </li>
+                <li>
+                  <strong className="text-foreground">In Shopify Admin:</strong> Go to{" "}
+                  <strong>Settings → Notifications → Webhooks → Create webhook</strong>. Pick
+                  event <strong>Order creation</strong>, format <strong>JSON</strong>, paste the
+                  CRM URL, then save. Shopify shows a long signing secret at the bottom (e.g.{" "}
+                  <code className="font-mono">1577b79637c87b…</code>).
+                </li>
+                <li>
+                  <strong className="text-foreground">Back here:</strong> Click{" "}
+                  <strong>Paste secret from Shopify</strong> on the store row and paste that
+                  signing secret. Then click <strong>Test webhook</strong> — should return 200.
+                </li>
+              </ol>
             </div>
           </div>
         </div>
@@ -272,7 +301,9 @@ function ShopifyTab({
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">HMAC secret</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        HMAC secret (must match Shopify)
+                      </Label>
                       <div className="flex items-center gap-1">
                         <Input
                           value={revealed ? s.webhook_secret : "•".repeat(24)}
@@ -299,6 +330,18 @@ function ShopifyTab({
                           <Copy className="h-3.5 w-3.5" />
                         </Button>
                       </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="w-full mt-1"
+                        onClick={() => {
+                          setSecretInput("");
+                          setEditSecretFor(s);
+                        }}
+                      >
+                        <Pencil className="mr-1 h-3 w-3" />
+                        Paste secret from Shopify
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -350,6 +393,52 @@ function ShopifyTab({
         onTest={(id) => testMut.mutate(id)}
         testing={testMut.isPending}
       />
+
+      <Dialog open={!!editSecretFor} onOpenChange={(v) => !v && setEditSecretFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Paste signing secret from Shopify</DialogTitle>
+            <DialogDescription>
+              In Shopify Admin → Settings → Notifications → Webhooks, scroll to{" "}
+              <strong>"Your webhooks will be signed with"</strong> at the bottom of the page and
+              copy that long hex string. Paste it here so we can verify incoming webhooks.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Shopify signing secret</Label>
+              <Input
+                value={secretInput}
+                onChange={(e) => setSecretInput(e.target.value)}
+                placeholder="1577b79637c87b06663332db08b64b60ebd9214bf2f52774251ade0c1f52adef"
+                className="font-mono text-xs"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Replaces the auto-generated secret for{" "}
+                <strong>{editSecretFor?.name}</strong>.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSecretFor(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                editSecretFor &&
+                updateSecretMut.mutate({
+                  id: editSecretFor.id,
+                  webhook_secret: secretInput.trim(),
+                })
+              }
+              disabled={!secretInput.trim() || updateSecretMut.isPending}
+            >
+              {updateSecretMut.isPending ? "Saving…" : "Save secret"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
