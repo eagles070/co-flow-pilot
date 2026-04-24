@@ -301,7 +301,9 @@ function ShopifyTab({
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">HMAC secret</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        HMAC secret (must match Shopify)
+                      </Label>
                       <div className="flex items-center gap-1">
                         <Input
                           value={revealed ? s.webhook_secret : "•".repeat(24)}
@@ -328,6 +330,18 @@ function ShopifyTab({
                           <Copy className="h-3.5 w-3.5" />
                         </Button>
                       </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="w-full mt-1"
+                        onClick={() => {
+                          setSecretInput("");
+                          setEditSecretFor(s);
+                        }}
+                      >
+                        <Pencil className="mr-1 h-3 w-3" />
+                        Paste secret from Shopify
+                      </Button>
                     </div>
                   </div>
                 </div>
