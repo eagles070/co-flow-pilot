@@ -4,12 +4,12 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Loader2, Trash2, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Plus, Loader2, Trash2, ArrowDownCircle, ArrowUpCircle, ArrowDownToLine, ArrowUpFromLine, Scale } from "lucide-react";
 import { toast } from "sonner";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 
 interface Row {
   id: string;
@@ -72,18 +72,18 @@ export function CashFlowTab() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="grid gap-4 md:grid-cols-3">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total cash in</CardTitle></CardHeader><CardContent><div className="text-2xl font-semibold text-green-600">{cashIn.toFixed(2)}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Total cash out</CardTitle></CardHeader><CardContent><div className="text-2xl font-semibold text-destructive">{cashOut.toFixed(2)}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Balance</CardTitle></CardHeader><CardContent><div className={`text-2xl font-semibold ${balance >= 0 ? "text-green-600" : "text-destructive"}`}>{balance.toFixed(2)}</div></CardContent></Card>
+        <KpiCard label="Total cash in" value={cashIn.toFixed(2)} icon={ArrowDownToLine} tone="luxury-4" hint="incoming flow" />
+        <KpiCard label="Total cash out" value={cashOut.toFixed(2)} icon={ArrowUpFromLine} tone="luxury-2" hint="outgoing flow" />
+        <KpiCard label="Balance" value={balance.toFixed(2)} icon={Scale} tone={balance >= 0 ? "luxury-1" : "luxury-2"} hint="net position" />
       </div>
 
       <div className="flex justify-end">
         {canManage && <Button onClick={() => setOpen(true)}><Plus className="mr-2 h-4 w-4" /> New entry</Button>}
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-2xl border border-border/70 bg-card shadow-[var(--shadow-sm)]">
         {loading ? (
           <div className="flex items-center justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : rows.length === 0 ? (
@@ -106,14 +106,14 @@ export function CashFlowTab() {
                   <TableCell>{r.occurred_at}</TableCell>
                   <TableCell>
                     {r.type === "in" ? (
-                      <span className="inline-flex items-center gap-1 text-green-600"><ArrowDownCircle className="h-4 w-4" /> In</span>
+                      <span className="inline-flex items-center gap-1 text-success font-medium"><ArrowDownCircle className="h-4 w-4" /> In</span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-destructive"><ArrowUpCircle className="h-4 w-4" /> Out</span>
+                      <span className="inline-flex items-center gap-1 text-destructive font-medium"><ArrowUpCircle className="h-4 w-4" /> Out</span>
                     )}
                   </TableCell>
                   <TableCell className="capitalize">{r.source}</TableCell>
                   <TableCell className="text-muted-foreground">{r.description ?? "—"}</TableCell>
-                  <TableCell className={`text-right font-medium ${r.type === "in" ? "text-green-600" : "text-destructive"}`}>{Number(r.amount).toFixed(2)}</TableCell>
+                  <TableCell className={`text-right font-semibold tabular-nums ${r.type === "in" ? "text-success" : "text-destructive"}`}>{Number(r.amount).toFixed(2)}</TableCell>
                   <TableCell className="text-right">
                     {canManage && <Button variant="ghost" size="icon" onClick={() => del(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
