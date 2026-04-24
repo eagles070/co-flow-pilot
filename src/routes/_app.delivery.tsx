@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, Link2, CircleDollarSign, Boxes, ShieldCheck } from "lucide-react";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 
 export const Route = createFileRoute("/_app/delivery")({
   component: DeliveryPage,
@@ -73,8 +74,21 @@ function DeliveryPage() {
     ["returned", "refused", "postponed"].includes(r.status),
   );
 
+  const stats = useMemo(() => {
+    const codMissing = rows
+      .filter((r) => ["shipped", "in_transit"].includes(r.status))
+      .reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
+    const unitsMissing = rows.filter((r) => r.status === "in_transit").length;
+    return {
+      total: rows.length,
+      codMissing,
+      unitsMissing,
+      openIssues: issues.length,
+    };
+  }, [rows, issues.length]);
+
   const renderTable = (data: OrderRow[]) => (
-    <div className="rounded-lg border bg-card">
+    <div className="rounded-xl border bg-card shadow-[var(--shadow-sm)]">
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -105,7 +119,7 @@ function DeliveryPage() {
                 <TableCell>
                   <Badge variant={statusVariant(o.status)}>{o.status}</Badge>
                 </TableCell>
-                <TableCell className="text-right">{Number(o.total_amount).toFixed(2)}</TableCell>
+                <TableCell className="text-right tabular-nums">{Number(o.total_amount).toFixed(2)}</TableCell>
                 <TableCell className="text-muted-foreground text-xs">
                   {new Date(o.updated_at).toLocaleString()}
                 </TableCell>
@@ -119,19 +133,56 @@ function DeliveryPage() {
 
   return (
     <div>
-      <PageHeader title="Delivery" description="Track shipments and follow-up issues." />
-      <Tabs defaultValue="followup">
-        <TabsList>
-          <TabsTrigger value="followup">Follow-up ({issues.length})</TabsTrigger>
-          <TabsTrigger value="all">All ({rows.length})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="followup" className="mt-4">
-          {renderTable(issues)}
-        </TabsContent>
-        <TabsContent value="all" className="mt-4">
-          {renderTable(rows)}
-        </TabsContent>
-      </Tabs>
+      <PageHeader
+        title="Delivery & Reconciliation"
+        description="COD tracking, stock recovery, and issue detection."
+      />
+
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <KpiCard
+            label="Delivery rows"
+            value={stats.total.toLocaleString()}
+            icon={Link2}
+            tone="luxury-1"
+            hint="orders linked to courier logic"
+          />
+          <KpiCard
+            label="COD missing"
+            value={`${stats.codMissing.toFixed(0)} dh`}
+            icon={CircleDollarSign}
+            tone="luxury-2"
+            hint="expected COD not yet received"
+          />
+          <KpiCard
+            label="Units missing"
+            value={stats.unitsMissing.toLocaleString()}
+            icon={Boxes}
+            tone="luxury-3"
+            hint="units not returned or recovered"
+          />
+          <KpiCard
+            label="Open issues"
+            value={stats.openIssues.toLocaleString()}
+            icon={ShieldCheck}
+            tone="luxury-4"
+            hint="delivery or reconciliation alerts"
+          />
+        </div>
+
+        <Tabs defaultValue="followup">
+          <TabsList>
+            <TabsTrigger value="followup">Follow-up ({issues.length})</TabsTrigger>
+            <TabsTrigger value="all">All ({rows.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="followup" className="mt-4">
+            {renderTable(issues)}
+          </TabsContent>
+          <TabsContent value="all" className="mt-4">
+            {renderTable(rows)}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
