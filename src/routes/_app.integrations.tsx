@@ -357,7 +357,7 @@ function ShopifySetupDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            <CheckCircle2 className="h-5 w-5 text-success" />
             Connect this store to Shopify
           </DialogTitle>
           <DialogDescription>
@@ -366,8 +366,8 @@ function ShopifySetupDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm flex gap-2">
-            <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+          <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm flex gap-2">
+            <AlertCircle className="h-4 w-4 mt-0.5 text-warning shrink-0" />
             <span>
               Shopify does <strong>not</strong> have a "Test webhook" button inside the admin.
               Use the <strong>Test webhook</strong> button below — it sends a signed sample
