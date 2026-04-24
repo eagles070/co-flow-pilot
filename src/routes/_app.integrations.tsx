@@ -799,13 +799,29 @@ function onNewRow(e) {
             {/* Direction 2: Sheets → CRM */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <span className="text-primary">←</span> Google Sheets → CRM
                   </CardTitle>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                    Auto sur nouvelle ligne
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                      Auto sur nouvelle ligne
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => syncMut.mutate(active.id)}
+                      disabled={syncMut.isPending || !active.spreadsheet_id}
+                      title={
+                        !active.spreadsheet_id
+                          ? "Ajoutez le Spreadsheet ID pour activer la sync manuelle"
+                          : "Relire les dernières lignes du Sheet"
+                      }
+                    >
+                      <RefreshCw className={`mr-1 h-3.5 w-3.5 ${syncMut.isPending ? "animate-spin" : ""}`} />
+                      {syncMut.isPending ? "Sync…" : "Sync maintenant"}
+                    </Button>
+                  </div>
                 </div>
                 <CardDescription>
                   Chaque nouvelle ligne dans le Sheet crée une commande dans le CRM.
