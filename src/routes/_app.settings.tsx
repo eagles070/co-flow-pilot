@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Lock } from "lucide-react";
+import { Lock, Settings as SettingsIcon } from "lucide-react";
 import { GeneralTab } from "@/components/settings/GeneralTab";
 import { AutomationTab } from "@/components/settings/AutomationTab";
 import { StatusesTab } from "@/components/settings/StatusesTab";
@@ -37,8 +38,14 @@ function SettingsPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader title="Settings" description="Central configuration hub for the system." />
+      <SectionHeader
+        icon={SettingsIcon}
+        title="System Configuration"
+        description="Manage statuses, cities, automations, notifications and more"
+        variant="primary"
+      />
       <Tabs defaultValue="general">
         <TabsList className="flex h-auto flex-wrap">
           <TabsTrigger value="general">General</TabsTrigger>

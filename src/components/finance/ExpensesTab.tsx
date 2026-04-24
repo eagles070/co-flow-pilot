@@ -98,7 +98,7 @@ export function ExpensesTab() {
         )}
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-2xl border border-border/70 bg-card shadow-[var(--shadow-sm)]">
         {loading ? (
           <div className="flex items-center justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : filtered.length === 0 ? (
@@ -119,10 +119,10 @@ export function ExpensesTab() {
               {filtered.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell>{e.expense_date}</TableCell>
-                  <TableCell className="capitalize">{e.category}</TableCell>
+                  <TableCell className="capitalize font-medium">{e.category}</TableCell>
                   <TableCell className="text-muted-foreground">{productName(e.product_id)}</TableCell>
                   <TableCell className="text-muted-foreground">{e.description ?? "—"}</TableCell>
-                  <TableCell className="text-right">{Number(e.amount).toFixed(2)}</TableCell>
+                  <TableCell className="text-right tabular-nums font-semibold">{Number(e.amount).toFixed(2)}</TableCell>
                   <TableCell className="text-right">
                     {canManage && (
                       <Button variant="ghost" size="icon" onClick={() => del(e.id)}>

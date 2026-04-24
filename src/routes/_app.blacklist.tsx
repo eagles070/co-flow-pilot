@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/blacklist")({
@@ -82,7 +83,7 @@ function BlacklistPage() {
   };
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Blacklist"
         description="Risky phone numbers — orders from these are auto-cancelled."
@@ -95,7 +96,14 @@ function BlacklistPage() {
         }
       />
 
-      <div className="rounded-lg border bg-card">
+      <SectionHeader
+        icon={ShieldAlert}
+        title="Risk Protection"
+        description={`${items.length} blocked number${items.length === 1 ? "" : "s"} · auto-cancel on incoming orders`}
+        variant="destructive"
+      />
+
+      <div className="rounded-2xl border border-border/70 bg-card shadow-[var(--shadow-sm)]">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

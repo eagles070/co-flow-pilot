@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type AppRole } from "@/lib/auth";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Pencil, Trash2, ShieldAlert, UserCheck } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, ShieldAlert, UserCheck, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   adminCreateUser, adminUpdateUser, adminDeleteUser,
@@ -114,7 +115,7 @@ function TeamPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Team Management"
         description="Create users, assign roles, and manage team access."
@@ -129,6 +130,12 @@ function TeamPage() {
             </Button>
           </div>
         }
+      />
+      <SectionHeader
+        icon={Users}
+        title="Workforce"
+        description="Moderators, agents and media buyers operating your CRM"
+        variant="luxury"
       />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabRole)}>

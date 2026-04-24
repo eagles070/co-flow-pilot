@@ -46,7 +46,9 @@ import {
   ListChecks,
   MoreVertical,
   Clock,
+  ShoppingBag,
 } from "lucide-react";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -374,7 +376,7 @@ function OrdersPage() {
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Orders"
         description={`${filtered.length} of ${orders.length} order(s)`}
@@ -386,6 +388,13 @@ function OrdersPage() {
             {canManage && <NewOrderDialog stores={stores} onCreated={fetchAll} />}
           </div>
         }
+      />
+
+      <SectionHeader
+        icon={ShoppingBag}
+        title="Order Management"
+        description="Filter, assign, and update orders across all sources"
+        variant="primary"
       />
 
       <Card className="p-4">
