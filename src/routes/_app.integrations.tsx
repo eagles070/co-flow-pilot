@@ -899,7 +899,7 @@ function onNewRow(e) {
 function CodeBlock({ code }: { code: string }) {
   return (
     <div className="relative group">
-      <pre className="rounded-xl bg-zinc-950 text-zinc-100 dark:bg-black/60 p-3 pr-16 text-[11px] leading-relaxed font-mono overflow-x-auto max-h-72 overflow-y-auto border border-border/40">
+      <pre className="rounded-xl bg-foreground/95 text-background p-3 pr-16 text-[11px] leading-relaxed font-mono overflow-x-auto max-h-72 overflow-y-auto border border-border/40">
         <code>{code}</code>
       </pre>
       <Button
