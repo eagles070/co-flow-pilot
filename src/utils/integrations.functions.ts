@@ -182,6 +182,35 @@ export const testShopifyWebhook = createServerFn({ method: "POST" })
     };
   });
 
+export const updateShopifyStore = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: { id: string; name?: string; domain?: string; webhook_secret?: string }) => {
+      if (!input.id) throw new Error("Store id required");
+      return input;
+    },
+  )
+  .handler(async ({ data, context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const patch: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (data.name !== undefined) patch.name = data.name;
+    if (data.domain !== undefined)
+      patch.domain = data.domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    if (data.webhook_secret !== undefined) {
+      const secret = data.webhook_secret.trim();
+      if (!secret) throw new Error("Webhook secret cannot be empty");
+      patch.webhook_secret = secret;
+    }
+    const { data: row, error } = await context.supabase
+      .from("shopify_stores")
+      .update(patch as any)
+      .eq("id", data.id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 export const deleteShopifyStore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { id: string }) => input)
@@ -191,6 +220,7 @@ export const deleteShopifyStore = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 // =================== GOOGLE SHEETS ===================
 
