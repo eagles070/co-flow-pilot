@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, DollarSign, Receipt, Truck, Wallet, Percent, ArrowDownToLine, ArrowUpFromLine, Scale, CheckCircle2, PackageX } from "lucide-react";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 
 export function OverviewTab() {
   const [loading, setLoading] = useState(true);
@@ -124,28 +124,18 @@ export function OverviewTab() {
         <div className="flex items-center justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Kpi label="Revenue" value={stats.revenue} />
-          <Kpi label="Expenses" value={stats.expenses} />
-          <Kpi label="Shipping (internal)" value={stats.shippingCost} tone="warn" />
-          <Kpi label="Net profit" value={profit} tone={profit >= 0 ? "good" : "bad"} />
-          <Kpi label="Margin" value={margin} suffix="%" tone={margin >= 15 ? "good" : margin >= 0 ? "warn" : "bad"} />
-          <Kpi label="Cash in" value={stats.cashIn} tone="good" />
-          <Kpi label="Cash out" value={stats.cashOut} tone="bad" />
-          <Kpi label="Balance" value={balance} tone={balance >= 0 ? "good" : "bad"} />
-          <Kpi label="Delivered orders" value={stats.deliveredCount} raw />
-          <Kpi label="Returned / refused" value={stats.returnedCount} raw />
+          <KpiCard label="Revenue" value={stats.revenue.toFixed(2)} icon={DollarSign} tone="luxury-4" hint="cash collected" />
+          <KpiCard label="Expenses" value={stats.expenses.toFixed(2)} icon={Receipt} tone="luxury-3" hint="operational costs" />
+          <KpiCard label="Shipping (internal)" value={stats.shippingCost.toFixed(2)} icon={Truck} tone="luxury-5" hint="delivery overhead" />
+          <KpiCard label="Net profit" value={profit.toFixed(2)} icon={Wallet} tone={profit >= 0 ? "luxury-1" : "luxury-2"} hint={profit >= 0 ? "positive margin" : "loss"} />
+          <KpiCard label="Margin" value={`${margin.toFixed(1)}%`} icon={Percent} tone={margin >= 15 ? "luxury-4" : margin >= 0 ? "luxury-3" : "luxury-2"} hint="profit ratio" />
+          <KpiCard label="Cash in" value={stats.cashIn.toFixed(2)} icon={ArrowDownToLine} tone="luxury-4" hint="incoming flow" />
+          <KpiCard label="Cash out" value={stats.cashOut.toFixed(2)} icon={ArrowUpFromLine} tone="luxury-2" hint="outgoing flow" />
+          <KpiCard label="Balance" value={balance.toFixed(2)} icon={Scale} tone={balance >= 0 ? "luxury-1" : "luxury-2"} hint="net cash" />
+          <KpiCard label="Delivered orders" value={stats.deliveredCount.toLocaleString()} icon={CheckCircle2} tone="luxury-4" hint="completed" />
+          <KpiCard label="Returned / refused" value={stats.returnedCount.toLocaleString()} icon={PackageX} tone="luxury-2" hint="lost revenue" />
         </div>
       )}
     </div>
-  );
-}
-
-function Kpi({ label, value, suffix, tone, raw }: { label: string; value: number; suffix?: string; tone?: "good" | "bad" | "warn"; raw?: boolean }) {
-  const color = tone === "good" ? "text-green-600" : tone === "bad" ? "text-destructive" : tone === "warn" ? "text-yellow-600" : "";
-  return (
-    <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">{label}</CardTitle></CardHeader>
-      <CardContent><div className={`text-2xl font-semibold ${color}`}>{raw ? value : value.toFixed(2)}{suffix}</div></CardContent>
-    </Card>
   );
 }
