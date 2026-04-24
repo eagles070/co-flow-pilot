@@ -69,11 +69,11 @@ export function buildAmeexParcelForm({
   form.append("address", order.shipping_address || "N/A");
   form.append("comment", order.notes || "");
 
-  // Send each line item as paired produit/quantite fields so Ameex links the
-  // parcel to its warehouse stock (instead of treating it as a "sample").
+  // Send each line item using the array format `produit[]` / `quantite[]` so
+  // Ameex links the parcel to its warehouse stock (instead of treating it as
+  // a "sample") and so multiple items are not overwritten.
   // Lines without a SKU are skipped here — the call-center handler already
   // surfaces a missing-SKU warning to the agent via stockErrors.
-  // Debug each incoming item
   items.forEach((item) => {
     console.log("[ameex] ITEM DEBUG:", item);
   });
@@ -86,8 +86,9 @@ export function buildAmeexParcelForm({
       );
       continue;
     }
-    form.append("produit", sku);
-    form.append("quantite", String(item.quantity));
+    // Use array notation so multiple lines are preserved server-side.
+    form.append("produit[]", sku);
+    form.append("quantite[]", String(item.quantity));
   }
 
   form.append("cod", String(codAmount));
