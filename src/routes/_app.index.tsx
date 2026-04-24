@@ -104,45 +104,45 @@ function Dashboard() {
 
         {/* Orders */}
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">📦 Orders</h2>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <KpiCard label="Total orders" value={data.totalOrders.toLocaleString()} icon={ShoppingBag} />
-            <KpiCard label="New orders" value={data.newOrders.toLocaleString()} icon={Inbox} tone="info" hint="Not treated yet" />
-            <KpiCard label="Waiting confirmation" value={data.waitingConfirmation.toLocaleString()} icon={ListChecks} tone="warning" />
-            <KpiCard label="NRP orders" value={data.nrpOrders.toLocaleString()} icon={PhoneMissed} tone="destructive" />
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">📦 Orders</h2>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <KpiCard label="Total orders" value={data.totalOrders.toLocaleString()} icon={ShoppingBag} tone="luxury-1" hint="all-time volume" />
+            <KpiCard label="New orders" value={data.newOrders.toLocaleString()} icon={Inbox} tone="luxury-5" hint="not treated yet" />
+            <KpiCard label="Waiting confirmation" value={data.waitingConfirmation.toLocaleString()} icon={ListChecks} tone="luxury-3" hint="pending review" />
+            <KpiCard label="NRP orders" value={data.nrpOrders.toLocaleString()} icon={PhoneMissed} tone="luxury-2" hint="needs follow-up" />
           </div>
         </section>
 
         {/* Call center */}
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">📞 Call center</h2>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <KpiCard label="Orders in queue" value={data.inQueue.toLocaleString()} icon={Inbox} tone="warning" />
-            <KpiCard label="Treated today" value={data.treatedToday.toLocaleString()} icon={PhoneCall} tone="info" />
-            <KpiCard label="Active agents" value={data.activeAgents.toLocaleString()} icon={Users} />
-            <KpiCard label="Avg call time" value={fmtSeconds(data.avgCallSeconds)} icon={Clock} />
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">📞 Call center</h2>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <KpiCard label="Orders in queue" value={data.inQueue.toLocaleString()} icon={Inbox} tone="luxury-3" hint="awaiting agent" />
+            <KpiCard label="Treated today" value={data.treatedToday.toLocaleString()} icon={PhoneCall} tone="luxury-5" hint="processed calls" />
+            <KpiCard label="Active agents" value={data.activeAgents.toLocaleString()} icon={Users} tone="luxury-1" hint="online now" />
+            <KpiCard label="Avg call time" value={fmtSeconds(data.avgCallSeconds)} icon={Clock} tone="luxury-4" hint="per conversation" />
           </div>
         </section>
 
         {/* Delivery */}
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">🚚 Delivery</h2>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <KpiCard label="Sent to delivery" value={data.sentToDelivery.toLocaleString()} icon={Truck} tone="info" />
-            <KpiCard label="Delivered" value={data.delivered.toLocaleString()} icon={CheckCircle2} tone="success" />
-            <KpiCard label="Refused / Returned" value={data.refusedReturned.toLocaleString()} icon={PackageX} tone="destructive" />
-            <KpiCard label="In transit" value={data.inTransit.toLocaleString()} icon={RotateCw} tone="info" />
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">🚚 Delivery</h2>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <KpiCard label="Sent to delivery" value={data.sentToDelivery.toLocaleString()} icon={Truck} tone="luxury-5" hint="shipped parcels" />
+            <KpiCard label="Delivered" value={data.delivered.toLocaleString()} icon={CheckCircle2} tone="luxury-4" hint="completed orders" />
+            <KpiCard label="Refused / Returned" value={data.refusedReturned.toLocaleString()} icon={PackageX} tone="luxury-2" hint="returned to stock" />
+            <KpiCard label="In transit" value={data.inTransit.toLocaleString()} icon={RotateCw} tone="luxury-1" hint="on the road" />
           </div>
         </section>
 
         {/* Finance */}
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">💰 Finance</h2>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <KpiCard label="Revenue (delivered)" value={fmtMoney(data.revenue)} icon={DollarSign} tone="success" />
-            <KpiCard label="Estimated profit" value={fmtMoney(data.estimatedProfit)} icon={Wallet} tone={data.estimatedProfit >= 0 ? "success" : "destructive"} />
-            <KpiCard label="Total expenses" value={fmtMoney(data.totalExpenses)} icon={Receipt} tone="warning" />
-            <KpiCard label="Margin" value={`${data.margin.toFixed(1)}%`} icon={Percent} tone={data.margin >= 15 ? "success" : data.margin >= 0 ? "warning" : "destructive"} />
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">💰 Finance</h2>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <KpiCard label="Revenue (delivered)" value={fmtMoney(data.revenue)} icon={DollarSign} tone="luxury-4" hint="cash collected" />
+            <KpiCard label="Estimated profit" value={fmtMoney(data.estimatedProfit)} icon={Wallet} tone={data.estimatedProfit >= 0 ? "luxury-1" : "luxury-2"} hint="net margin" />
+            <KpiCard label="Total expenses" value={fmtMoney(data.totalExpenses)} icon={Receipt} tone="luxury-3" hint="costs incurred" />
+            <KpiCard label="Margin" value={`${data.margin.toFixed(1)}%`} icon={Percent} tone={data.margin >= 15 ? "luxury-4" : data.margin >= 0 ? "luxury-3" : "luxury-2"} hint="profit ratio" />
           </div>
         </section>
 
