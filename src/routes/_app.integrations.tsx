@@ -606,48 +606,27 @@ function SheetsTab({
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [direction, setDirection] = useState<"import" | "export">("import");
   const [spreadsheetId, setSpreadsheetId] = useState("");
-  const [sheetName, setSheetName] = useState("Sheet1");
-  const [mapping, setMapping] = useState(
-    JSON.stringify(
-      {
-        customer_name: "name",
-        customer_phone: "phone",
-        city: "city",
-        shipping_address: "address",
-        total_amount: "total",
-        product_name: "product",
-      },
-      null,
-      2,
-    ),
-  );
+  const [sheetName, setSheetName] = useState("Commandes");
 
   const create = useServerFn(createSheetsIntegration);
   const del = useServerFn(deleteSheetsIntegration);
-  const sync = useServerFn(syncSheetNow);
+
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   const createMut = useMutation({
-    mutationFn: async () => {
-      let column_mapping: Record<string, string> = {};
-      try {
-        column_mapping = JSON.parse(mapping);
-      } catch {
-        throw new Error("Column mapping is not valid JSON");
-      }
-      return create({
+    mutationFn: () =>
+      create({
         data: {
           name,
-          direction,
+          direction: "both",
           spreadsheet_id: spreadsheetId,
           sheet_name: sheetName,
-          column_mapping,
+          column_mapping: {},
         },
-      });
-    },
+      }),
     onSuccess: () => {
-      toast.success("Integration added");
+      toast.success("Configuration ajoutée");
       setOpen(false);
       setName("");
       setSpreadsheetId("");
@@ -656,169 +635,282 @@ function SheetsTab({
     onError: (e: any) => toast.error(e.message),
   });
 
-  const syncMut = useMutation({
-    mutationFn: async (id: string) => {
-      const { data: sess } = await supabase.auth.getSession();
-      const provider_token = (sess.session as any)?.provider_token;
-      return sync({ data: { id, provider_token } });
-    },
-    onSuccess: (r: any) => {
-      toast.success(`Imported ${r.imported} new orders`);
-      onChange();
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
+  // Pick the first integration as the active one for showing snippets.
+  const active = sheets[0];
+  const token = active?.column_mapping?.webhook_token ?? "";
+  const webhookUrl = active ? `${baseUrl}/api/webhooks/sheets/${active.id}?token=${token}` : "";
 
-  async function reconnectGoogle() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin + "/integrations",
-        scopes: "https://www.googleapis.com/auth/spreadsheets.readonly email profile",
-        queryParams: { access_type: "offline", prompt: "consent" },
-      },
-    });
-    if (error) toast.error("Google sign-in failed: " + error.message);
+  const exportScript = `// 1. Extensions → Apps Script (dans votre Sheet)
+// 2. Collez ce code, sauvegardez, puis Deploy → New deployment → Web app
+// 3. Anyone → Deploy → copiez l'URL → "Nouvelle config"
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheetName = data.sheet || 'Commandes';
+    var row = data.row;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) sheet = ss.insertSheet(sheetName);
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(['Code','Client','Téléphone','Ville','Adresse','Produit','Prix','État','Source','Boutique','Employé','Livreur','Date ajout','Date validation']);
+    }
+    sheet.appendRow(row);
+    return ContentService.createTextOutput(JSON.stringify({ok: true})).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ok: false, error: String(err)})).setMimeType(ContentService.MimeType.JSON);
   }
+}`;
+
+  const importScript = `// 1. Extensions → Apps Script (dans votre Sheet)
+// 2. Collez ce code complet
+// 3. Modifiez CRM_URL avec l'URL ci-dessus
+// 4. Run → setupTrigger (une seule fois, autorisez les permissions)
+
+var CRM_URL = '${webhookUrl || "https://votre-crm.app/api/webhooks/sheets/<id>?token=<token>"}';
+
+function setupTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(function(t){ if (t.getHandlerFunction() === 'onNewRow') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('onNewRow').forSpreadsheet(SpreadsheetApp.getActive()).onChange().create();
+}
+
+function onNewRow(e) {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  var row = sheet.getRange(lastRow, 1, 1, 9).getValues()[0];
+  // Columns: A Nom, B Téléphone, C Ville, D Adresse, E Produit, F Quantité, G Prix, H Source, I Note
+  var payload = { row: row, external_id: 'sheet-row-' + lastRow };
+  UrlFetchApp.fetch(CRM_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+}`;
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <div>
-          <CardTitle>Google Sheets</CardTitle>
-          <CardDescription>
-            Import orders from a spreadsheet. First row must be headers — map them below.
-          </CardDescription>
+    <div className="space-y-5">
+      {/* Hero */}
+      <div className="rounded-3xl border border-success/30 bg-gradient-to-br from-success/10 via-success/5 to-transparent p-5 flex items-start gap-4">
+        <div className="rounded-2xl bg-success/15 p-3 shrink-0">
+          <FileSpreadsheet className="h-7 w-7 text-success" />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={reconnectGoogle}>
-            Connect Google
-          </Button>
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add sheet
-          </Button>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold">Double synchronisation</h3>
+          <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              CRM → Sheets (confirmation) <CheckCircle2 className="h-4 w-4 text-success" />
+            </span>
+            <span className="flex items-center gap-1.5">
+              Sheets → CRM (nouvelle commande) <CheckCircle2 className="h-4 w-4 text-success" />
+            </span>
+          </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : sheets.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No sheet integrations yet.</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Direction</TableHead>
-                <TableHead>Spreadsheet</TableHead>
-                <TableHead>Sheet</TableHead>
-                <TableHead>Last sync</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sheets.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{s.direction}</Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {s.spreadsheet_id.slice(0, 12)}…
-                  </TableCell>
-                  <TableCell>{s.sheet_name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {s.last_sync_at ? new Date(s.last_sync_at).toLocaleString() : "Never"}
-                  </TableCell>
-                  <TableCell className="space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => syncMut.mutate(s.id)}
-                      disabled={syncMut.isPending}
-                    >
-                      <RefreshCw className="mr-1 h-3 w-3" /> Sync
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="mr-1 h-4 w-4" /> Nouvelle config
+        </Button>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Chargement…</p>
+      ) : sheets.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <FileSpreadsheet className="mx-auto h-10 w-10 text-muted-foreground/40" />
+            <p className="mt-3 text-sm text-muted-foreground">
+              Aucune configuration encore. Cliquez sur <strong>Nouvelle config</strong> pour
+              démarrer.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {active && (
+        <>
+          {/* Active config summary */}
+          <Card>
+            <CardContent className="py-3 px-4 flex flex-wrap items-center gap-3 justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="font-mono">{active.name}</Badge>
+                <span className="text-xs text-muted-foreground">
+                  Sheet : <strong className="text-foreground">{active.sheet_name}</strong>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Dernière sync :{" "}
+                  {active.last_sync_at
+                    ? new Date(active.last_sync_at).toLocaleString()
+                    : "Jamais"}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => del({ data: { id: active.id } }).then(onChange)}
+              >
+                <Trash2 className="mr-1 h-3.5 w-3.5" /> Supprimer
+              </Button>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            {/* Direction 1: CRM → Sheets */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <span className="text-success">→</span> CRM → Google Sheets
+                  </CardTitle>
+                  <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                    Auto sur confirmation
+                  </Badge>
+                </div>
+                <CardDescription>
+                  Chaque commande confirmée est envoyée automatiquement.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-xs font-semibold text-muted-foreground">
+                  1. Apps Script dans votre Sheet :
+                </div>
+                <CodeBlock code={exportScript} />
+                <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground flex items-start gap-2">
+                  <AlertCircle className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+                  <span>
+                    Deploy → New deployment → Web app → Anyone → Deploy → copiez l'URL → ouvrez{" "}
+                    <strong>"Nouvelle config"</strong>
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Direction 2: Sheets → CRM */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <span className="text-primary">←</span> Google Sheets → CRM
+                  </CardTitle>
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                    Auto sur nouvelle ligne
+                  </Badge>
+                </div>
+                <CardDescription>
+                  Chaque nouvelle ligne dans le Sheet crée une commande dans le CRM.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="text-xs font-semibold text-muted-foreground mb-1.5">
+                    1. URL Webhook CRM :
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 border border-border/60 px-3 py-2">
+                    <code className="font-mono text-xs flex-1 truncate text-primary">
+                      {webhookUrl}
+                    </code>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copy(webhookUrl)}>
+                      <Copy className="h-3.5 w-3.5" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => del({ data: { id: s.id } }).then(onChange)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-muted-foreground mb-1.5">
+                    2. Apps Script dans votre Sheet :
+                  </div>
+                  <CodeBlock code={importScript} />
+                </div>
+
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+                  <div className="text-xs font-semibold mb-2">
+                    Structure du Sheet (ordre des colonnes) :
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span>● A – Nom client</span>
+                    <span>● B – Téléphone</span>
+                    <span>● C – Ville</span>
+                    <span>● D – Adresse</span>
+                    <span>● E – Produit</span>
+                    <span>● F – Quantité</span>
+                    <span>● G – Prix</span>
+                    <span>● H – Source</span>
+                    <span>● I – Note</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Connect a Google Sheet</DialogTitle>
+            <DialogTitle>Nouvelle configuration</DialogTitle>
             <DialogDescription>
-              Click "Connect Google" first to authorize access. Then paste the spreadsheet ID
-              from its URL.
+              Liez un Google Sheet pour la synchronisation bidirectionnelle.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
-              <Label>Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Orders sheet" />
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Nom de la configuration</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ex: Sheet commandes principal"
+              />
             </div>
-            <div>
-              <Label>Direction</Label>
-              <Select
-                value={direction}
-                onValueChange={(v) => setDirection(v as "import" | "export")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="import">Import (Sheet → CRM)</SelectItem>
-                  <SelectItem value="export">Export (CRM → Sheet)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Spreadsheet ID</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Spreadsheet ID (optionnel)</Label>
               <Input
                 value={spreadsheetId}
                 onChange={(e) => setSpreadsheetId(e.target.value)}
-                placeholder="1abc...XYZ"
+                placeholder="1abc...XYZ (depuis l'URL du Sheet)"
+                className="font-mono text-xs"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                From URL: docs.google.com/spreadsheets/d/<strong>SPREADSHEET_ID</strong>/edit
+              <p className="text-xs text-muted-foreground">
+                docs.google.com/spreadsheets/d/<strong>SPREADSHEET_ID</strong>/edit
               </p>
             </div>
-            <div>
-              <Label>Sheet (tab) name</Label>
-              <Input value={sheetName} onChange={(e) => setSheetName(e.target.value)} />
-            </div>
-            <div>
-              <Label>Column mapping (CRM field → spreadsheet header)</Label>
-              <Textarea
-                value={mapping}
-                onChange={(e) => setMapping(e.target.value)}
-                rows={8}
-                className="font-mono text-xs"
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Nom de l'onglet</Label>
+              <Input
+                value={sheetName}
+                onChange={(e) => setSheetName(e.target.value)}
+                placeholder="Commandes"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              Annuler
             </Button>
-            <Button onClick={() => createMut.mutate()} disabled={createMut.isPending}>
-              {createMut.isPending ? "Saving…" : "Save"}
+            <Button onClick={() => createMut.mutate()} disabled={createMut.isPending || !name}>
+              {createMut.isPending ? "Enregistrement…" : "💾 Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
+  );
+}
+
+function CodeBlock({ code }: { code: string }) {
+  return (
+    <div className="relative group">
+      <pre className="rounded-xl bg-zinc-950 text-zinc-100 dark:bg-black/60 p-3 pr-16 text-[11px] leading-relaxed font-mono overflow-x-auto max-h-72 overflow-y-auto border border-border/40">
+        <code>{code}</code>
+      </pre>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="absolute top-2 right-2 h-7 text-xs"
+        onClick={() => copy(code)}
+      >
+        <Copy className="mr-1 h-3 w-3" /> Copier
+      </Button>
+    </div>
   );
 }
 
