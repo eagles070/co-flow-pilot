@@ -355,35 +355,49 @@ function ShopifyTab({
       </CardContent>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Shopify store</DialogTitle>
-            <DialogDescription>
-              We'll generate a webhook URL and HMAC secret. Add them in your Shopify admin under{" "}
-              <strong>Settings → Notifications → Webhooks</strong> for the "Order creation" event
-              with format JSON.
-            </DialogDescription>
+            <DialogTitle>Nouvelle boutique</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Store name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="My Store" />
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Nom de la boutique</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ex: MonStore Maroc"
+              />
+              <p className="text-xs text-muted-foreground">Le nom qui apparaît dans le CRM</p>
             </div>
-            <div>
-              <Label>Shopify domain</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Domaine Shopify (.myshopify.com)</Label>
               <Input
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
-                placeholder="my-store.myshopify.com"
+                placeholder="ex: kev81q-i0.myshopify.com"
               />
+              <p className="text-xs text-muted-foreground">Votre domaine Shopify complet</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Shopify Webhook Secret</Label>
+              <Input
+                value={newSecret}
+                onChange={(e) => setNewSecret(e.target.value)}
+                placeholder="Signing secret from Shopify Admin"
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Shopify Admin → Settings → Notifications → Webhooks. Laissez vide pour générer un
+                secret automatique.
+              </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              Annuler
             </Button>
-            <Button onClick={() => createMut.mutate()} disabled={createMut.isPending}>
-              {createMut.isPending ? "Adding…" : "Add store"}
+            <Button onClick={() => createMut.mutate()} disabled={createMut.isPending || !name || !domain}>
+              {createMut.isPending ? "Enregistrement…" : "💾 Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>
