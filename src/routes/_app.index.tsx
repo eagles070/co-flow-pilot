@@ -198,6 +198,7 @@ function Dashboard() {
         {/* Team performance */}
         <section className="grid gap-4 lg:grid-cols-2">
           <PerformanceList
+            tone="good"
             title="Top agents"
             description="Highest confirmed orders"
             rows={data.topAgents}
@@ -206,6 +207,7 @@ function Dashboard() {
             empty="No agent activity yet"
           />
           <PerformanceList
+            tone="bad"
             title="Worst agents"
             description="High NRP rate"
             rows={data.worstAgents.map((a) => ({ name: a.name, primary: a.primary, badge: { text: `${a.rate.toFixed(0)}% NRP`, tone: "bad" as const } }))}
@@ -217,6 +219,7 @@ function Dashboard() {
         {/* Product performance */}
         <section className="grid gap-4 lg:grid-cols-2">
           <PerformanceList
+            tone="good"
             title="Top selling products"
             description="By delivered units"
             rows={data.topProducts}
@@ -224,6 +227,7 @@ function Dashboard() {
             empty="No product sales yet"
           />
           <PerformanceList
+            tone="bad"
             title="Problem products"
             description="High return / refusal rate"
             rows={data.problemProducts.map((p) => ({ name: p.name, primary: p.primary, badge: { text: `${p.rate.toFixed(0)}% returned`, tone: "bad" as const } }))}
@@ -235,6 +239,7 @@ function Dashboard() {
         {/* City performance */}
         <section className="grid gap-4 lg:grid-cols-2">
           <PerformanceList
+            tone="good"
             title="Top cities"
             description="Highest delivery volume"
             rows={data.topCities.map((c) => ({ name: c.name, primary: c.primary, badge: { text: `${c.rate.toFixed(0)}%`, tone: "good" as const } }))}
@@ -242,6 +247,7 @@ function Dashboard() {
             empty="No city data yet"
           />
           <PerformanceList
+            tone="bad"
             title="Problem cities"
             description="High refusal rate"
             rows={data.problemCities.map((c) => ({ name: c.name, primary: c.primary, badge: { text: `${c.rate.toFixed(0)}% refused`, tone: "bad" as const } }))}
