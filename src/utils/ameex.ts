@@ -11,6 +11,7 @@ type AmeexOrder = {
   city: string | null;
   /** Numeric Ameex city ID (e.g. "21"). When present, takes priority over `city` name. */
   ameex_city_id?: string | null;
+  ameex_order_label?: string | null;
   shipping_address: string | null;
   notes: string | null;
   total_amount: number | string;
@@ -43,9 +44,13 @@ export function buildAmeexParcelForm({
   items: AmeexItem[];
   provider: AmeexProvider;
 }) {
-  const form = new FormData();
+  const form = new URLSearchParams();
   const businessId = getAmeexBusinessId(provider);
   const codAmount = normalizeAmount(order.total_amount);
+  const itemSummary = items
+    .map((item) => `${item.quantity}× ${item.product_name?.trim() || item.sku?.trim() || "Produit"}`)
+    .join(", ");
+  const comment = [itemSummary, order.notes?.trim()].filter(Boolean).join(" | ").slice(0, 240);
 
   if (!businessId) {
     console.warn("[ameex] Missing business_id on provider. Parcel may be classified incorrectly unless Ameex Business ID is configured.");
@@ -55,7 +60,7 @@ export function buildAmeexParcelForm({
   // `SIMPLE` was still being classified as a sample on their side.
   form.append("type", "1");
   form.append("colis_type", "stock");
-  form.append("order_num", order.reference);
+  form.append("order_num", order.ameex_order_label?.trim() || order.reference);
   // "replace": "false" => brand new parcel (NOUVEAU COLIS).
   form.append("replace", "false");
   form.append("open", "YES");
@@ -67,7 +72,7 @@ export function buildAmeexParcelForm({
   const cityValue = order.ameex_city_id?.trim() || order.city || "1";
   form.append("city", cityValue);
   form.append("address", order.shipping_address || "N/A");
-  form.append("comment", order.notes || "");
+  form.append("comment", comment);
 
   // Send each line item using the array format `produit[]` / `quantite[]` so
   // Ameex links the parcel to its warehouse stock (instead of treating it as
@@ -102,8 +107,8 @@ export function buildAmeexParcelForm({
   }
 
   // Debug final form payload sent to Ameex
-  for (const pair of form.entries()) {
-    console.log("[ameex] AMEEX FIELD:", pair[0], "=", pair[1]);
+  for (const [key, value] of form.entries()) {
+    console.log("[ameex] AMEEX FIELD:", key, "=", value);
   }
 
   return form;
