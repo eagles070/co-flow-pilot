@@ -145,7 +145,10 @@ function ShopifyTab({
   const [domain, setDomain] = useState("");
   const [createdStore, setCreatedStore] = useState<any | null>(null);
   const [revealId, setRevealId] = useState<string | null>(null);
+  const [editSecretFor, setEditSecretFor] = useState<any | null>(null);
+  const [secretInput, setSecretInput] = useState("");
   const create = useServerFn(createShopifyStore);
+  const update = useServerFn(updateShopifyStore);
   const del = useServerFn(deleteShopifyStore);
   const testWebhook = useServerFn(testShopifyWebhook);
 
@@ -171,6 +174,18 @@ function ShopifyTab({
     onError: (e: any) => toast.error(e.message),
   });
 
+  const updateSecretMut = useMutation({
+    mutationFn: (vars: { id: string; webhook_secret: string }) =>
+      update({ data: vars }),
+    onSuccess: () => {
+      toast.success("Secret updated. Now test the webhook.");
+      setEditSecretFor(null);
+      setSecretInput("");
+      onChange();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const testMut = useMutation({
     mutationFn: (id: string) => testWebhook({ data: { id, base_url: baseUrl } }),
     onSuccess: (r: any) => {
@@ -187,6 +202,7 @@ function ShopifyTab({
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   return (
     <Card>
