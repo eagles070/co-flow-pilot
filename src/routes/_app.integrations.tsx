@@ -39,6 +39,7 @@ import { ShoppingBag, FileSpreadsheet, Truck, Copy, RefreshCw, Trash2, Send, Plu
 import {
   listIntegrations,
   createShopifyStore,
+  updateShopifyStore,
   deleteShopifyStore,
   testShopifyWebhook,
   createSheetsIntegration,
@@ -49,6 +50,7 @@ import {
   deleteDeliveryProvider,
   testDeliveryProvider,
 } from "@/utils/integrations.functions";
+
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/integrations")({
