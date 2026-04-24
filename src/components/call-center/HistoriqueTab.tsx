@@ -22,6 +22,7 @@ interface Row {
   status: OrderStatus;
   created_at: string;
   agent_id: string | null;
+  order_items: { product_name: string; quantity: number }[];
 }
 
 interface AgentOpt { id: string; full_name: string | null; email: string | null }
@@ -62,7 +63,7 @@ export function HistoriqueTab({ statuses, stores }: Props) {
     setLoading(true);
     let q = supabase
       .from("orders")
-      .select("id, reference, customer_name, customer_phone, city, total_amount, status, created_at, agent_id", { count: "exact" })
+      .select("id, reference, customer_name, customer_phone, city, total_amount, status, created_at, agent_id, order_items(product_name, quantity)", { count: "exact" })
       .order("created_at", { ascending: false });
 
     if (statusFilter !== "all") q = q.eq("status", statusFilter as OrderStatus);
@@ -156,6 +157,7 @@ export function HistoriqueTab({ statuses, stores }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Client</TableHead>
+                  <TableHead>Informations</TableHead>
                   <TableHead>Ville</TableHead>
                   <TableHead className="text-right">Prix</TableHead>
                   <TableHead>État</TableHead>
@@ -172,6 +174,23 @@ export function HistoriqueTab({ statuses, stores }: Props) {
                       <TableCell>
                         <div className="font-medium">{r.customer_name}</div>
                         <div className="font-mono text-xs text-muted-foreground">{r.customer_phone}</div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {r.order_items?.length ? (
+                          <div className="space-y-1">
+                            {r.order_items.slice(0, 2).map((item, index) => (
+                              <div key={`${r.id}-${index}`} className="leading-5">
+                                <span className="text-foreground">{item.product_name}</span>
+                                <span className="ml-1 text-xs">×{item.quantity}</span>
+                              </div>
+                            ))}
+                            {r.order_items.length > 2 && (
+                              <div className="text-xs">+{r.order_items.length - 2} autre(s)</div>
+                            )}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell className="text-sm">{r.city ?? "—"}</TableCell>
                       <TableCell className="text-right font-medium">{Number(r.total_amount).toFixed(2)}</TableCell>
