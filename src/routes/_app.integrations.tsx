@@ -393,6 +393,52 @@ function ShopifyTab({
         onTest={(id) => testMut.mutate(id)}
         testing={testMut.isPending}
       />
+
+      <Dialog open={!!editSecretFor} onOpenChange={(v) => !v && setEditSecretFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Paste signing secret from Shopify</DialogTitle>
+            <DialogDescription>
+              In Shopify Admin → Settings → Notifications → Webhooks, scroll to{" "}
+              <strong>"Your webhooks will be signed with"</strong> at the bottom of the page and
+              copy that long hex string. Paste it here so we can verify incoming webhooks.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Shopify signing secret</Label>
+              <Input
+                value={secretInput}
+                onChange={(e) => setSecretInput(e.target.value)}
+                placeholder="1577b79637c87b06663332db08b64b60ebd9214bf2f52774251ade0c1f52adef"
+                className="font-mono text-xs"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Replaces the auto-generated secret for{" "}
+                <strong>{editSecretFor?.name}</strong>.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSecretFor(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                editSecretFor &&
+                updateSecretMut.mutate({
+                  id: editSecretFor.id,
+                  webhook_secret: secretInput.trim(),
+                })
+              }
+              disabled={!secretInput.trim() || updateSecretMut.isPending}
+            >
+              {updateSecretMut.isPending ? "Saving…" : "Save secret"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
