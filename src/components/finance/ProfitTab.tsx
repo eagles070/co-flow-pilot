@@ -120,7 +120,7 @@ export function ProfitTab() {
   if (rows.length === 0) return <div className="py-16 text-center text-sm text-muted-foreground">No order data yet.</div>;
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="rounded-2xl border border-border/70 bg-card shadow-[var(--shadow-sm)]">
       <Table>
         <TableHeader>
           <TableRow>
