@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShoppingBag, FileSpreadsheet, Truck, Copy, Trash2, Send, Plus, Pencil, Plug, CheckCircle2, AlertCircle, ExternalLink, Eye, EyeOff } from "lucide-react";
+import { ShoppingBag, FileSpreadsheet, Truck, Copy, Trash2, Send, Plus, Pencil, Plug, CheckCircle2, AlertCircle, ExternalLink, Eye, EyeOff, RefreshCw } from "lucide-react";
 import {
   listIntegrations,
   createShopifyStore,
@@ -43,6 +43,7 @@ import {
   testShopifyWebhook,
   createSheetsIntegration,
   deleteSheetsIntegration,
+  syncSheetNow,
   createDeliveryProvider,
   updateDeliveryProvider,
   deleteDeliveryProvider,
@@ -607,6 +608,7 @@ function SheetsTab({
 
   const create = useServerFn(createSheetsIntegration);
   const del = useServerFn(deleteSheetsIntegration);
+  const sync = useServerFn(syncSheetNow);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -626,6 +628,19 @@ function SheetsTab({
       setOpen(false);
       setName("");
       setSpreadsheetId("");
+      onChange();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const syncMut = useMutation({
+    mutationFn: (id: string) => sync({ data: { id } }),
+    onSuccess: (r: any) => {
+      toast.success(
+        r?.imported
+          ? `${r.imported} nouvelle(s) commande(s) importée(s)`
+          : "Sync terminée — aucune nouvelle ligne",
+      );
       onChange();
     },
     onError: (e: any) => toast.error(e.message),
@@ -784,13 +799,29 @@ function onNewRow(e) {
             {/* Direction 2: Sheets → CRM */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <span className="text-primary">←</span> Google Sheets → CRM
                   </CardTitle>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                    Auto sur nouvelle ligne
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                      Auto sur nouvelle ligne
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => syncMut.mutate(active.id)}
+                      disabled={syncMut.isPending || !active.spreadsheet_id}
+                      title={
+                        !active.spreadsheet_id
+                          ? "Ajoutez le Spreadsheet ID pour activer la sync manuelle"
+                          : "Relire les dernières lignes du Sheet"
+                      }
+                    >
+                      <RefreshCw className={`mr-1 h-3.5 w-3.5 ${syncMut.isPending ? "animate-spin" : ""}`} />
+                      {syncMut.isPending ? "Sync…" : "Sync maintenant"}
+                    </Button>
+                  </div>
                 </div>
                 <CardDescription>
                   Chaque nouvelle ligne dans le Sheet crée une commande dans le CRM.
