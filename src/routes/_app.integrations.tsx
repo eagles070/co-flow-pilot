@@ -34,8 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, FileSpreadsheet, Truck, Copy, RefreshCw, Trash2, Send, Plus, Pencil, Plug, CheckCircle2, AlertCircle, ExternalLink, Eye, EyeOff } from "lucide-react";
+import { ShoppingBag, FileSpreadsheet, Truck, Copy, Trash2, Send, Plus, Pencil, Plug, CheckCircle2, AlertCircle, ExternalLink, Eye, EyeOff } from "lucide-react";
 import {
   listIntegrations,
   createShopifyStore,
@@ -44,14 +43,11 @@ import {
   testShopifyWebhook,
   createSheetsIntegration,
   deleteSheetsIntegration,
-  syncSheetNow,
   createDeliveryProvider,
   updateDeliveryProvider,
   deleteDeliveryProvider,
   testDeliveryProvider,
 } from "@/utils/integrations.functions";
-
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/integrations")({
   component: IntegrationsPage,
