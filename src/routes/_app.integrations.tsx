@@ -201,6 +201,25 @@ function ShopifyTab({
         </Button>
       </CardHeader>
       <CardContent>
+        <div className="mb-4 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 space-y-2">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-primary/15 p-2">
+              <AlertCircle className="h-4 w-4 text-primary" />
+            </div>
+            <div className="space-y-1 text-sm">
+              <div className="font-semibold">Where do I paste the webhook in Shopify?</div>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Shopify does <strong>not</strong> have a "Test webhook" button. Each store below
+                shows its <strong>Webhook URL</strong> and <strong>HMAC secret</strong> — copy
+                them into Shopify Admin → <strong>Settings → Notifications</strong> → scroll to{" "}
+                <strong>Webhooks</strong> → <em>Create webhook</em>. Pick event{" "}
+                <strong>Order creation</strong>, format <strong>JSON</strong>, then paste the URL.
+                When done, click <strong>Test webhook</strong> below to verify it works.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : stores.length === 0 ? (
