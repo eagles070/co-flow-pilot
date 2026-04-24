@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, FileSpreadsheet, Truck, Copy, RefreshCw, Trash2, Send, Plus, Pencil } from "lucide-react";
+import { ShoppingBag, FileSpreadsheet, Truck, Copy, RefreshCw, Trash2, Send, Plus, Pencil, Plug } from "lucide-react";
 import {
   listIntegrations,
   createShopifyStore,
@@ -71,10 +72,16 @@ function IntegrationsPage() {
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Integrations"
         description="Connect Shopify, Google Sheets and delivery providers."
+      />
+      <SectionHeader
+        icon={Plug}
+        title="Connected Channels"
+        description="Manage external systems feeding orders into your CRM"
+        variant="primary"
       />
       <Tabs defaultValue="shopify" className="space-y-4">
         <TabsList>
