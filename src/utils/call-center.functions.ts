@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-  buildAmeexParcelForm,
+  buildAmeexParcelPayload,
   findAmeexTracking,
+  getAmeexEndpoint,
   getAmeexErrorMessage,
+  getAmeexHeaders,
   isAmeexSuccessResponse,
   parseAmeexResponse,
 } from "@/utils/ameex";
@@ -183,10 +185,10 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       };
     }
 
-    // 5) Push to Ameex
+    // 5) Push to Ameex (PHP-compatible: PUT + JSON to /Parcels/AddParcelStock)
     const agentDisplayName = await resolveAgentDisplayName(db, userId);
 
-    const form = buildAmeexParcelForm({
+    const { payload: ameexPayload, fromStock } = buildAmeexParcelPayload({
       order: {
         ...order,
         ameex_city_id: ameexCityId,
@@ -195,24 +197,18 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       items: ameexItems,
       provider,
     });
-    const requestFields = Array.from(form.entries()).map(([key, value]) => ({
-      key,
-      value: String(value),
-    }));
 
-    const url = `${provider.base_url}/customer/Delivery/Parcels/Action/Type/Add`;
+    const url = getAmeexEndpoint(provider, fromStock);
+    const body = JSON.stringify(ameexPayload);
 
     let res: Response;
     let text = "";
     let parsed: any = null;
     try {
       res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "C-Api-Id": provider.api_id,
-          "C-Api-Key": provider.api_key,
-        },
-        body: form,
+        method: "PUT",
+        headers: getAmeexHeaders(provider),
+        body,
       });
       text = await res.text();
       parsed = parseAmeexResponse(text);
@@ -228,7 +224,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
           request: {
             order_id: order.id,
             items: ameexItems,
-            fields: requestFields,
+            payload: ameexPayload,
           },
         },
       });
@@ -258,7 +254,8 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
         request: {
           order_id: order.id,
           items: ameexItems,
-          fields: requestFields,
+          payload: ameexPayload,
+          fromStock,
         },
         response: parsed,
       },
