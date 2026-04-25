@@ -211,7 +211,6 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
         headers: {
           "C-Api-Id": provider.api_id,
           "C-Api-Key": provider.api_key,
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
         },
         body: form,
       });

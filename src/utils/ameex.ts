@@ -44,7 +44,7 @@ export function buildAmeexParcelForm({
   items: AmeexItem[];
   provider: AmeexProvider;
 }) {
-  const form = new URLSearchParams();
+  const form = new FormData();
   const businessId = getAmeexBusinessId(provider);
   const codAmount = normalizeAmount(order.total_amount);
   const itemSummary = items
@@ -132,7 +132,7 @@ export function buildAmeexParcelForm({
 
   // Debug final form payload sent to Ameex
   for (const [key, value] of form.entries()) {
-    console.log("[ameex] AMEEX FIELD:", key, "=", value);
+    console.log("[ameex] AMEEX FIELD:", key, "=", String(value));
   }
 
   console.log("[ameex] STOCK ITEMS COUNT:", stockItems.length);
