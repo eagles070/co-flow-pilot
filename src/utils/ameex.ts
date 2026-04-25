@@ -80,8 +80,6 @@ export function buildAmeexParcelForm({
   form.append("city", cityValue);
   form.append("address", order.shipping_address || "N/A");
   form.append("comment", comment);
-  form.append("products_note", comment);
-  form.append("description", comment);
 
   // Ameex stock parcels expect nested product fields instead of the legacy
   // `produit[]` / `quantite[]` keys. Using `products[index][ref]` preserves
@@ -104,20 +102,13 @@ export function buildAmeexParcelForm({
 
     const productKey = `products[${index}]`;
 
-    // Legacy Ameex stock keys. These are the most likely to be interpreted by
-    // the stock engine when multiple SKUs are present.
-    form.append("produit[]", sku);
-    form.append("quantite[]", String(item.quantity));
-
-    // Human-readable labels so the parcel details can still show product names
-    // in Ameex while `produit[]` keeps the exact warehouse SKU.
-    form.append("designation[]", item.product_name);
-    form.append("product_name[]", item.product_name);
-
     // `ref` is the warehouse stock reference (SKU) Ameex uses for stock-based
     // orders. We avoid sending product names here.
+    form.append(`${productKey}[id]`, sku);
     form.append(`${productKey}[ref]`, sku);
     form.append(`${productKey}[sku]`, sku);
+    form.append(`${productKey}[title]`, item.product_name);
+    form.append(`${productKey}[label]`, item.product_name);
     form.append(`${productKey}[name]`, item.product_name);
     form.append(`${productKey}[designation]`, item.product_name);
     form.append(`${productKey}[product_name]`, item.product_name);
@@ -126,6 +117,7 @@ export function buildAmeexParcelForm({
     // nested quantity aliases while keeping a single source value.
     form.append(`${productKey}[quantity]`, String(item.quantity));
     form.append(`${productKey}[qte]`, String(item.quantity));
+    form.append(`${productKey}[qty]`, String(item.quantity));
   }
 
   form.append("cod", String(codAmount));
