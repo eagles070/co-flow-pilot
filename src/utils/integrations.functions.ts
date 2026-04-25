@@ -507,9 +507,10 @@ export const testDeliveryProvider = createServerFn({ method: "POST" })
       .single();
     if (error || !p) throw new Error("Provider not found");
 
-    const url = `${p.base_url}/customer/Delivery/Parcels/Info?ParcelCode=TEST_PING`;
+    const base = (p.base_url?.trim() || "https://cdn.ameex.ma/app/api").replace(/\/+$/, "");
+    const url = `${base}/customer/Parcels/Info?ParcelCode=TEST_PING`;
     const res = await fetch(url, {
-      headers: { "C-Api-Id": p.api_id, "C-Api-Key": p.api_key },
+      headers: { "X-AUTH-ID": p.api_id, "X-AUTH-KEY": p.api_key },
     });
     const text = await res.text();
 
