@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-  buildAmeexParcelForm,
+  buildAmeexParcelPayload,
   findAmeexTracking,
+  getAmeexEndpoint,
   getAmeexErrorMessage,
+  getAmeexHeaders,
   isAmeexSuccessResponse,
   parseAmeexResponse,
 } from "@/utils/ameex";
@@ -549,7 +551,7 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
 
     const items = (order.order_items as any[]) ?? [];
     const agentDisplayName = await getAgentDisplayName(db, order.agent_id);
-    const form = buildAmeexParcelForm({
+    const { payload: ameexPayload, fromStock } = buildAmeexParcelPayload({
       order: {
         ...order,
         ameex_order_label: agentDisplayName || order.reference,
@@ -558,14 +560,11 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
       provider,
     });
 
-    const url = `${provider.base_url}/customer/Delivery/Parcels/Action/Type/Add`;
+    const url = getAmeexEndpoint(provider, fromStock);
     const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "C-Api-Id": provider.api_id,
-        "C-Api-Key": provider.api_key,
-      },
-      body: form,
+      method: "PUT",
+      headers: getAmeexHeaders(provider),
+      body: JSON.stringify(ameexPayload),
     });
     const text = await res.text();
     const parsed = parseAmeexResponse(text);
@@ -584,7 +583,7 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
       endpoint: url,
       http_status: res.status,
       status: res.ok && ameexSuccess && !!trackingNumber ? "success" : "error",
-      payload: { request: { order_id: order.id }, response: parsed },
+      payload: { request: { order_id: order.id, payload: ameexPayload, fromStock }, response: parsed },
       error: res.ok ? (ameexSuccess && trackingNumber ? undefined : ameexError || "No tracking number returned") : `HTTP ${res.status}`,
     });
 
