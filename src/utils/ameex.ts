@@ -51,6 +51,13 @@ export function buildAmeexParcelForm({
     .map((item) => `${item.quantity}× ${item.product_name?.trim() || item.sku?.trim() || "Produit"}`)
     .join(", ");
   const comment = [itemSummary, order.notes?.trim()].filter(Boolean).join(" | ").slice(0, 240);
+  const stockItems = items
+    .map((item) => ({
+      product_name: item.product_name?.trim() || "Produit",
+      quantity: item.quantity,
+      sku: item.sku?.trim() || null,
+    }))
+    .filter((item) => !!item.sku);
 
   if (!businessId) {
     console.warn("[ameex] Missing business_id on provider. Parcel may be classified incorrectly unless Ameex Business ID is configured.");
@@ -73,6 +80,8 @@ export function buildAmeexParcelForm({
   form.append("city", cityValue);
   form.append("address", order.shipping_address || "N/A");
   form.append("comment", comment);
+  form.append("products_note", comment);
+  form.append("description", comment);
 
   // Ameex stock parcels expect nested product fields instead of the legacy
   // `produit[]` / `quantite[]` keys. Using `products[index][ref]` preserves
@@ -84,8 +93,8 @@ export function buildAmeexParcelForm({
     console.log("[ameex] ITEM DEBUG:", item);
   });
 
-  for (const [index, item] of items.entries()) {
-    const sku = item.sku?.trim();
+  for (const [index, item] of stockItems.entries()) {
+    const sku = item.sku;
     if (!sku) {
       console.warn(
         `[ameex] Missing SKU for product: "${item.product_name}" (qty ${item.quantity}). Skipping products payload for this line.`,
@@ -95,9 +104,23 @@ export function buildAmeexParcelForm({
 
     const productKey = `products[${index}]`;
 
+    // Legacy Ameex stock keys. These are the most likely to be interpreted by
+    // the stock engine when multiple SKUs are present.
+    form.append("produit[]", sku);
+    form.append("quantite[]", String(item.quantity));
+
+    // Human-readable labels so the parcel details can still show product names
+    // in Ameex while `produit[]` keeps the exact warehouse SKU.
+    form.append("designation[]", item.product_name);
+    form.append("product_name[]", item.product_name);
+
     // `ref` is the warehouse stock reference (SKU) Ameex uses for stock-based
     // orders. We avoid sending product names here.
     form.append(`${productKey}[ref]`, sku);
+    form.append(`${productKey}[sku]`, sku);
+    form.append(`${productKey}[name]`, item.product_name);
+    form.append(`${productKey}[designation]`, item.product_name);
+    form.append(`${productKey}[product_name]`, item.product_name);
 
     // Quantity naming can vary across partner setups, so we include the common
     // nested quantity aliases while keeping a single source value.
