@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-  buildAmeexParcelForm,
+  buildAmeexParcelPayload,
   findAmeexTracking,
+  getAmeexEndpoint,
   getAmeexErrorMessage,
+  getAmeexHeaders,
   isAmeexSuccessResponse,
   parseAmeexResponse,
 } from "@/utils/ameex";
@@ -432,7 +434,7 @@ export const createDeliveryProvider = createServerFn({ method: "POST" })
         api_id: data.api_id,
         api_key: data.api_key,
         business_id: data.business_id?.trim() || null,
-        base_url: data.base_url || "https://api.ameex.app",
+        base_url: data.base_url || "https://cdn.ameex.ma/app/api",
         webhook_token,
         created_by: context.userId,
       })
@@ -505,9 +507,10 @@ export const testDeliveryProvider = createServerFn({ method: "POST" })
       .single();
     if (error || !p) throw new Error("Provider not found");
 
-    const url = `${p.base_url}/customer/Delivery/Parcels/Info?ParcelCode=TEST_PING`;
+    const base = (p.base_url?.trim() || "https://cdn.ameex.ma/app/api").replace(/\/+$/, "");
+    const url = `${base}/customer/Parcels/Info?ParcelCode=TEST_PING`;
     const res = await fetch(url, {
-      headers: { "C-Api-Id": p.api_id, "C-Api-Key": p.api_key },
+      headers: { "X-AUTH-ID": p.api_id, "X-AUTH-KEY": p.api_key },
     });
     const text = await res.text();
 
@@ -549,7 +552,7 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
 
     const items = (order.order_items as any[]) ?? [];
     const agentDisplayName = await getAgentDisplayName(db, order.agent_id);
-    const form = buildAmeexParcelForm({
+    const { payload: ameexPayload, fromStock } = buildAmeexParcelPayload({
       order: {
         ...order,
         ameex_order_label: agentDisplayName || order.reference,
@@ -558,14 +561,11 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
       provider,
     });
 
-    const url = `${provider.base_url}/customer/Delivery/Parcels/Action/Type/Add`;
+    const url = getAmeexEndpoint(provider, fromStock);
     const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "C-Api-Id": provider.api_id,
-        "C-Api-Key": provider.api_key,
-      },
-      body: form,
+      method: "PUT",
+      headers: getAmeexHeaders(provider),
+      body: JSON.stringify(ameexPayload),
     });
     const text = await res.text();
     const parsed = parseAmeexResponse(text);
@@ -584,7 +584,7 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
       endpoint: url,
       http_status: res.status,
       status: res.ok && ameexSuccess && !!trackingNumber ? "success" : "error",
-      payload: { request: { order_id: order.id }, response: parsed },
+      payload: { request: { order_id: order.id, payload: ameexPayload, fromStock }, response: parsed },
       error: res.ok ? (ameexSuccess && trackingNumber ? undefined : ameexError || "No tracking number returned") : `HTTP ${res.status}`,
     });
 
