@@ -19,7 +19,9 @@ type AmeexOrder = {
 
 type AmeexProvider = {
   api_id?: string | null;
+  api_key?: string | null;
   business_id?: string | null;
+  base_url?: string | null;
 };
 
 function normalizeAmount(value: number | string) {
@@ -31,11 +33,19 @@ function normalizeAmount(value: number | string) {
 export function getAmeexBusinessId(provider: AmeexProvider): string | null {
   const businessId = provider.business_id?.trim();
   if (businessId) return businessId;
-
   return null;
 }
 
-export function buildAmeexParcelForm({
+/**
+ * Build the JSON payload Ameex expects for a stock-based parcel.
+ * Mirrors the working PHP implementation:
+ *   - PRODUCTS = { sku: qty } object
+ *   - Uppercase field names
+ *   - When at least one SKU is provided -> `fromStock=true` and we hit
+ *     /customer/Parcels/AddParcelStock with PUT + JSON.
+ *   - Otherwise -> /customer/Parcels/AddParcel (sample/manual).
+ */
+export function buildAmeexParcelPayload({
   order,
   items,
   provider,
@@ -43,101 +53,82 @@ export function buildAmeexParcelForm({
   order: AmeexOrder;
   items: AmeexItem[];
   provider: AmeexProvider;
-}) {
-  const form = new FormData();
+}): {
+  payload: Record<string, any>;
+  fromStock: boolean;
+  stockItemsCount: number;
+} {
   const businessId = getAmeexBusinessId(provider);
   const codAmount = normalizeAmount(order.total_amount);
+
+  // Human-readable nature/comment fields (so product names appear in Ameex UI)
   const itemSummary = items
-    .map((item) => `${item.quantity}× ${item.product_name?.trim() || item.sku?.trim() || "Produit"}`)
+    .map((item) => `${item.product_name?.trim() || item.sku?.trim() || "Produit"} x${item.quantity}`)
     .join(", ");
   const comment = [itemSummary, order.notes?.trim()].filter(Boolean).join(" | ").slice(0, 240);
-  const stockItems = items
-    .map((item) => ({
-      product_name: item.product_name?.trim() || "Produit",
-      quantity: item.quantity,
-      sku: item.sku?.trim() || null,
-    }))
-    .filter((item) => !!item.sku);
 
-  if (!businessId) {
-    console.warn("[ameex] Missing business_id on provider. Parcel may be classified incorrectly unless Ameex Business ID is configured.");
+  // Build PRODUCTS map: { "SKU1": qty1, "SKU2": qty2 }
+  const productsMap: Record<string, number> = {};
+  let stockItemsCount = 0;
+  for (const item of items) {
+    const sku = item.sku?.trim();
+    if (!sku) continue;
+    // If duplicate SKU, sum quantities
+    productsMap[sku] = (productsMap[sku] || 0) + item.quantity;
+    stockItemsCount += 1;
   }
 
-  // Ameex stock-based parcels should use numeric type "1".
-  // `SIMPLE` was still being classified as a sample on their side.
-  form.append("type", "1");
-  form.append("colis_type", "stock");
-  form.append("order_num", order.ameex_order_label?.trim() || order.reference);
-  // "replace": "false" => brand new parcel (NOUVEAU COLIS).
-  form.append("replace", "false");
-  form.append("open", "YES");
-  form.append("try", "NO");
-  form.append("fragile", "0");
-  form.append("receiver", order.customer_name);
-  form.append("phone", order.customer_phone);
-  // Ameex expects the numeric city ID, not the city name. Fall back to "1" only as last resort.
+  const fromStock = stockItemsCount > 0;
+
   const cityValue = order.ameex_city_id?.trim() || order.city || "1";
-  form.append("city", cityValue);
-  form.append("address", order.shipping_address || "N/A");
-  form.append("comment", comment);
 
-  // Ameex stock parcels expect nested product fields instead of the legacy
-  // `produit[]` / `quantite[]` keys. Using `products[index][ref]` preserves
-  // every SKU and lets Ameex resolve warehouse stock correctly instead of
-  // falling back to a sample parcel.
-  // Lines without a SKU are skipped here — the call-center handler already
-  // surfaces a missing-SKU warning to the agent via stockErrors.
-  items.forEach((item) => {
-    console.log("[ameex] ITEM DEBUG:", item);
-  });
-
-  for (const [index, item] of stockItems.entries()) {
-    const sku = item.sku;
-    if (!sku) {
-      console.warn(
-        `[ameex] Missing SKU for product: "${item.product_name}" (qty ${item.quantity}). Skipping products payload for this line.`,
-      );
-      continue;
-    }
-
-    const productKey = `products[${index}]`;
-
-    // `ref` is the warehouse stock reference (SKU) Ameex uses for stock-based
-    // orders. We avoid sending product names here.
-    form.append(`${productKey}[id]`, sku);
-    form.append(`${productKey}[ref]`, sku);
-    form.append(`${productKey}[sku]`, sku);
-    form.append(`${productKey}[title]`, item.product_name);
-    form.append(`${productKey}[label]`, item.product_name);
-    form.append(`${productKey}[name]`, item.product_name);
-    form.append(`${productKey}[designation]`, item.product_name);
-    form.append(`${productKey}[product_name]`, item.product_name);
-
-    // Quantity naming can vary across partner setups, so we include the common
-    // nested quantity aliases while keeping a single source value.
-    form.append(`${productKey}[quantity]`, String(item.quantity));
-    form.append(`${productKey}[qte]`, String(item.quantity));
-    form.append(`${productKey}[qty]`, String(item.quantity));
-  }
-
-  form.append("cod", String(codAmount));
+  const payload: Record<string, any> = {
+    ORDER_NUM: order.ameex_order_label?.trim() || order.reference,
+    RECEIVER: order.customer_name,
+    PHONE: order.customer_phone,
+    CITY: cityValue,
+    ADDRESS: order.shipping_address || "N/A",
+    COD: codAmount,
+    COMMENT: comment,
+    NATURE_PRODUCT: itemSummary || "Produit",
+    PRODUCTS: productsMap,
+  };
 
   if (businessId) {
-    form.append("business", businessId);
+    payload.BUSINESS = businessId;
   }
 
-  if (codAmount > 0) {
-    form.append("CRBT", "0");
+  if (!businessId) {
+    console.warn("[ameex] Missing business_id on provider — parcel may be misclassified.");
   }
 
-  // Debug final form payload sent to Ameex
-  for (const [key, value] of form.entries()) {
-    console.log("[ameex] AMEEX FIELD:", key, "=", String(value));
-  }
+  console.log("[ameex] Built payload:", JSON.stringify(payload));
+  console.log("[ameex] fromStock:", fromStock, "stockItemsCount:", stockItemsCount);
 
-  console.log("[ameex] STOCK ITEMS COUNT:", stockItems.length);
+  return { payload, fromStock, stockItemsCount };
+}
 
-  return form;
+/**
+ * Resolve the correct Ameex endpoint URL.
+ * Stock parcels use /customer/Parcels/AddParcelStock,
+ * sample/manual use /customer/Parcels/AddParcel.
+ */
+export function getAmeexEndpoint(provider: AmeexProvider, fromStock: boolean): string {
+  // PHP reference uses https://cdn.ameex.ma/app/api as the base.
+  // Allow provider.base_url override but normalize trailing slash.
+  const base = (provider.base_url?.trim() || "https://cdn.ameex.ma/app/api").replace(/\/+$/, "");
+  return fromStock
+    ? `${base}/customer/Parcels/AddParcelStock`
+    : `${base}/customer/Parcels/AddParcel`;
+}
+
+/** Headers for Ameex API requests (matches the working PHP cURL setup). */
+export function getAmeexHeaders(provider: AmeexProvider): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    "X-AUTH-ID": provider.api_id || "",
+    "X-AUTH-KEY": provider.api_key || "",
+  };
 }
 
 export function parseAmeexResponse(text: string): any {
@@ -149,27 +140,45 @@ export function parseAmeexResponse(text: string): any {
 }
 
 export function isAmeexSuccessResponse(payload: any) {
+  // PHP just looks for ADD-PARCEL.NEW-PARCEL.TRACKING-NUMBER. If present -> success.
+  if (findAmeexTracking(payload)) return true;
   const apiType = payload?.api?.type;
-  return apiType ? apiType === "success" : true;
+  if (apiType) return apiType === "success";
+  return false;
 }
 
 export function getAmeexErrorMessage(payload: any): string | null {
-  return payload?.api?.msg || payload?.message || payload?.error || null;
+  return (
+    payload?.api?.msg ||
+    payload?.message ||
+    payload?.error ||
+    payload?.["ADD-PARCEL"]?.error ||
+    payload?.["ADD-PARCEL"]?.message ||
+    null
+  );
 }
 
 export function findAmeexTracking(payload: any): string | null {
   if (!payload || typeof payload !== "object") return null;
 
+  // Primary: PHP-style response shape
+  const direct =
+    payload?.["ADD-PARCEL"]?.["NEW-PARCEL"]?.["TRACKING-NUMBER"] ||
+    payload?.["ADD-PARCEL"]?.["NEW-PARCEL"]?.["tracking_number"];
+  if (direct && typeof direct === "string") return direct.trim();
+  if (typeof direct === "number") return String(direct);
+
   const keys = [
+    "TRACKING-NUMBER",
+    "tracking_number",
+    "tracking",
+    "TRACKING",
     "code",
     "CODE",
     "parcel_code",
     "PARCEL_CODE",
     "parcel",
     "PARCEL",
-    "tracking",
-    "tracking_number",
-    "TRACKING",
     "barcode",
     "BARCODE",
     "num",
@@ -192,4 +201,23 @@ export function findAmeexTracking(payload: any): string | null {
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Backwards-compat shim: old callers used buildAmeexParcelForm() returning a
+// FormData. Keep the export but route it through the new JSON payload helper
+// so any straggler import still works (returns a FormData snapshot of the
+// payload, not used by the main flow anymore).
+// ---------------------------------------------------------------------------
+export function buildAmeexParcelForm(args: {
+  order: AmeexOrder;
+  items: AmeexItem[];
+  provider: AmeexProvider;
+}): FormData {
+  const { payload } = buildAmeexParcelPayload(args);
+  const form = new FormData();
+  for (const [k, v] of Object.entries(payload)) {
+    form.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+  }
+  return form;
 }
