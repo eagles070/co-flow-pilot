@@ -74,26 +74,35 @@ export function buildAmeexParcelForm({
   form.append("address", order.shipping_address || "N/A");
   form.append("comment", comment);
 
-  // Send each line item using the array format `produit[]` / `quantite[]` so
-  // Ameex links the parcel to its warehouse stock (instead of treating it as
-  // a "sample") and so multiple items are not overwritten.
+  // Ameex stock parcels expect nested product fields instead of the legacy
+  // `produit[]` / `quantite[]` keys. Using `products[index][ref]` preserves
+  // every SKU and lets Ameex resolve warehouse stock correctly instead of
+  // falling back to a sample parcel.
   // Lines without a SKU are skipped here — the call-center handler already
   // surfaces a missing-SKU warning to the agent via stockErrors.
   items.forEach((item) => {
     console.log("[ameex] ITEM DEBUG:", item);
   });
 
-  for (const item of items) {
+  for (const [index, item] of items.entries()) {
     const sku = item.sku?.trim();
     if (!sku) {
       console.warn(
-        `[ameex] Missing SKU for product: "${item.product_name}" (qty ${item.quantity}). Skipping produit/quantite for this line.`,
+        `[ameex] Missing SKU for product: "${item.product_name}" (qty ${item.quantity}). Skipping products payload for this line.`,
       );
       continue;
     }
-    // Use array notation so multiple lines are preserved server-side.
-    form.append("produit[]", sku);
-    form.append("quantite[]", String(item.quantity));
+
+    const productKey = `products[${index}]`;
+
+    // `ref` is the warehouse stock reference (SKU) Ameex uses for stock-based
+    // orders. We avoid sending product names here.
+    form.append(`${productKey}[ref]`, sku);
+
+    // Quantity naming can vary across partner setups, so we include the common
+    // nested quantity aliases while keeping a single source value.
+    form.append(`${productKey}[quantity]`, String(item.quantity));
+    form.append(`${productKey}[qte]`, String(item.quantity));
   }
 
   form.append("cod", String(codAmount));
