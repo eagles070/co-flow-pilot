@@ -135,6 +135,8 @@ export function buildAmeexParcelForm({
     console.log("[ameex] AMEEX FIELD:", key, "=", value);
   }
 
+  console.log("[ameex] STOCK ITEMS COUNT:", stockItems.length);
+
   return form;
 }
 
