@@ -435,7 +435,7 @@ export const createDeliveryProvider = createServerFn({ method: "POST" })
         api_id: data.api_id,
         api_key: data.api_key,
         business_id: data.business_id?.trim() || null,
-        base_url: data.base_url || "https://cdn.ameex.ma/app/api",
+        base_url: getAmeexApiBase({ base_url: data.base_url }),
         webhook_token,
         created_by: context.userId,
       })
