@@ -36,6 +36,23 @@ export function getAmeexBusinessId(provider: AmeexProvider): string | null {
   return null;
 }
 
+export function getAmeexApiBase(provider: AmeexProvider): string {
+  const rawBase = provider.base_url?.trim() || "https://cdn.ameex.ma/app/api";
+  const normalizedBase = rawBase.replace(/\/+$/, "");
+
+  // Legacy Ameex app/login hosts return an HTML/JSON login page instead of the API.
+  // Force the documented API host whenever an old host is still saved in settings.
+  if (/^https?:\/\/api\.ameex\.app(?:\/.*)?$/i.test(normalizedBase)) {
+    return "https://cdn.ameex.ma/app/api";
+  }
+
+  if (/^https?:\/\/cdn\.ameex\.ma(?:\/app)?$/i.test(normalizedBase)) {
+    return "https://cdn.ameex.ma/app/api";
+  }
+
+  return normalizedBase;
+}
+
 /**
  * Build the JSON payload Ameex expects for a stock-based parcel.
  * Mirrors the working PHP implementation:
@@ -114,9 +131,7 @@ export function buildAmeexParcelPayload({
  * sample/manual use /customer/Parcels/AddParcel.
  */
 export function getAmeexEndpoint(provider: AmeexProvider, fromStock: boolean): string {
-  // PHP reference uses https://cdn.ameex.ma/app/api as the base.
-  // Allow provider.base_url override but normalize trailing slash.
-  const base = (provider.base_url?.trim() || "https://cdn.ameex.ma/app/api").replace(/\/+$/, "");
+  const base = getAmeexApiBase(provider);
   return fromStock
     ? `${base}/customer/Parcels/AddParcelStock`
     : `${base}/customer/Parcels/AddParcel`;
