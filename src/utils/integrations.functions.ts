@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   buildAmeexParcelPayload,
+  getAmeexApiBase,
   findAmeexTracking,
   getAmeexEndpoint,
   getAmeexErrorMessage,
@@ -468,7 +469,7 @@ export const updateDeliveryProvider = createServerFn({ method: "POST" })
     if (data.api_id !== undefined) patch.api_id = data.api_id;
     if (data.api_key !== undefined) patch.api_key = data.api_key;
     if (data.business_id !== undefined) patch.business_id = data.business_id.trim() || null;
-    if (data.base_url !== undefined) patch.base_url = data.base_url;
+    if (data.base_url !== undefined) patch.base_url = getAmeexApiBase({ base_url: data.base_url });
     patch.updated_at = new Date().toISOString();
 
     const { data: row, error } = await context.supabase
@@ -507,7 +508,7 @@ export const testDeliveryProvider = createServerFn({ method: "POST" })
       .single();
     if (error || !p) throw new Error("Provider not found");
 
-    const base = (p.base_url?.trim() || "https://cdn.ameex.ma/app/api").replace(/\/+$/, "");
+    const base = getAmeexApiBase(p);
     const url = `${base}/customer/Parcels/Info?ParcelCode=TEST_PING`;
     const res = await fetch(url, {
       headers: { "X-AUTH-ID": p.api_id, "X-AUTH-KEY": p.api_key },
