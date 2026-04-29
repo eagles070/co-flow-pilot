@@ -257,12 +257,46 @@ function ProductsPage() {
       image_url: form.image_url || null,
       supplier_id: form.supplier_id || null,
     };
-    const { error } = editing
-      ? await supabase.from("products").update(payload).eq("id", editing.id)
-      : await supabase.from("products").insert(payload);
+
+    if (editing) {
+      // Stock is managed via stock_movements (trigger applies the delta).
+      // Strip `stock` from the update so we don't overwrite the trigger-managed value.
+      const { stock: newStock, ...updatePayload } = payload;
+      const { error } = await supabase
+        .from("products")
+        .update(updatePayload)
+        .eq("id", editing.id);
+      if (error) {
+        setSaving(false);
+        return toast.error(error.message);
+      }
+
+      const delta = newStock - editing.stock;
+      if (delta !== 0) {
+        const { error: smErr } = await supabase.from("stock_movements").insert({
+          product_id: editing.id,
+          type: "adjustment",
+          quantity: delta,
+          note: "Manual adjustment from Edit product",
+          created_by: user?.id ?? null,
+        });
+        if (smErr) {
+          setSaving(false);
+          return toast.error(`Stock adjustment failed: ${smErr.message}`);
+        }
+      }
+      setSaving(false);
+      toast.success("Product updated");
+      setOpen(false);
+      load();
+      return;
+    }
+
+    // Create flow: insert product (with initial stock as the starting value).
+    const { error } = await supabase.from("products").insert(payload);
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success(editing ? "Product updated" : "Product created");
+    toast.success("Product created");
     setOpen(false);
     load();
   };
