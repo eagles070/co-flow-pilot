@@ -626,13 +626,18 @@ function ProductsPage() {
                   />
                 </div>
                 <div>
-                  <Label>Initial stock</Label>
+                  <Label>{editing ? "Stock (set new total)" : "Initial stock"}</Label>
                   <Input
                     type="number"
                     value={form.stock}
                     onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-                    disabled={!!editing}
                   />
+                  {editing && form.stock !== editing.stock ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Adjustment of {form.stock - editing.stock > 0 ? "+" : ""}
+                      {form.stock - editing.stock} will be recorded.
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div>
