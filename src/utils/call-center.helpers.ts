@@ -8,6 +8,7 @@ export type CallCenterOrderItem = {
 export type MatchedProduct = {
   id: string;
   sku: string | null;
+  sku_ameex: string | null;
   name: string;
 };
 
