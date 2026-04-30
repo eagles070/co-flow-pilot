@@ -172,14 +172,14 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       ameexCityId = (cityRow as any)?.ameex_city_id || null;
     }
 
-    if (!ameexCityId) {
+    if (!ameexCityId || !/^\d+$/.test(String(ameexCityId).trim())) {
       return {
         ok: false,
         stock: { applied: stockApplied, errors: stockErrors },
         ameex: {
           ok: false,
           error: order.city
-            ? `City "${order.city}" is not mapped to an Ameex city ID. Open Settings → Cities and pick the matching Ameex city.`
+            ? `City "${order.city}" is not mapped to a valid numeric Ameex city ID. Open Settings → Cities and pick the matching Ameex city.`
             : "Order has no city. Edit the order and pick a city, then map it in Settings → Cities.",
         },
       };
