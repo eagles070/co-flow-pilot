@@ -210,6 +210,7 @@ function ProductsPage() {
     setForm({
       name: p.name,
       sku: p.sku ?? "",
+      sku_ameex: p.sku_ameex ?? "",
       description: p.description ?? "",
       cost_price: Number(p.cost_price),
       sell_price: Number(p.sell_price),
