@@ -154,6 +154,7 @@ function ProductsPage() {
   const empty: Omit<Product, "id" | "updated_at"> = {
     name: "",
     sku: "",
+    sku_ameex: "",
     description: "",
     cost_price: 0,
     sell_price: 0,
