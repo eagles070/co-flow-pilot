@@ -505,10 +505,14 @@ function ProductsPage() {
                       )}
                     </TableCell>
                     <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {p.id.slice(0, 8)}
-                    </TableCell>
                     <TableCell className="text-muted-foreground">{p.sku ?? "—"}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {p.sku_ameex ? (
+                        <span className="text-foreground">{p.sku_ameex}</span>
+                      ) : (
+                        <span className="text-destructive">— missing</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <span
                         className={
