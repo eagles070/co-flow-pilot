@@ -27,6 +27,7 @@ import { Route as AppBlacklistRouteImport } from './routes/_app.blacklist'
 import { Route as ApiWebhooksShopifyStoreIdRouteImport } from './routes/api/webhooks/shopify.$storeId'
 import { Route as ApiWebhooksSheetsIdRouteImport } from './routes/api/webhooks/sheets.$id'
 import { Route as ApiWebhooksAmeexProviderIdRouteImport } from './routes/api/webhooks/ameex.$providerId'
+import { Route as ApiPublicCronAmeexSyncRouteImport } from './routes/api/public/cron/ameex-sync'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -119,6 +120,11 @@ const ApiWebhooksAmeexProviderIdRoute =
     path: '/api/webhooks/ameex/$providerId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronAmeexSyncRoute = ApiPublicCronAmeexSyncRouteImport.update({
+  id: '/api/public/cron/ameex-sync',
+  path: '/api/public/cron/ameex-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/sourcing': typeof AppSourcingRoute
   '/team': typeof AppTeamRoute
+  '/api/public/cron/ameex-sync': typeof ApiPublicCronAmeexSyncRoute
   '/api/webhooks/ameex/$providerId': typeof ApiWebhooksAmeexProviderIdRoute
   '/api/webhooks/sheets/$id': typeof ApiWebhooksSheetsIdRoute
   '/api/webhooks/shopify/$storeId': typeof ApiWebhooksShopifyStoreIdRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/sourcing': typeof AppSourcingRoute
   '/team': typeof AppTeamRoute
   '/': typeof AppIndexRoute
+  '/api/public/cron/ameex-sync': typeof ApiPublicCronAmeexSyncRoute
   '/api/webhooks/ameex/$providerId': typeof ApiWebhooksAmeexProviderIdRoute
   '/api/webhooks/sheets/$id': typeof ApiWebhooksSheetsIdRoute
   '/api/webhooks/shopify/$storeId': typeof ApiWebhooksShopifyStoreIdRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/_app/sourcing': typeof AppSourcingRoute
   '/_app/team': typeof AppTeamRoute
   '/_app/': typeof AppIndexRoute
+  '/api/public/cron/ameex-sync': typeof ApiPublicCronAmeexSyncRoute
   '/api/webhooks/ameex/$providerId': typeof ApiWebhooksAmeexProviderIdRoute
   '/api/webhooks/sheets/$id': typeof ApiWebhooksSheetsIdRoute
   '/api/webhooks/shopify/$storeId': typeof ApiWebhooksShopifyStoreIdRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sourcing'
     | '/team'
+    | '/api/public/cron/ameex-sync'
     | '/api/webhooks/ameex/$providerId'
     | '/api/webhooks/sheets/$id'
     | '/api/webhooks/shopify/$storeId'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/sourcing'
     | '/team'
     | '/'
+    | '/api/public/cron/ameex-sync'
     | '/api/webhooks/ameex/$providerId'
     | '/api/webhooks/sheets/$id'
     | '/api/webhooks/shopify/$storeId'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/_app/sourcing'
     | '/_app/team'
     | '/_app/'
+    | '/api/public/cron/ameex-sync'
     | '/api/webhooks/ameex/$providerId'
     | '/api/webhooks/sheets/$id'
     | '/api/webhooks/shopify/$storeId'
@@ -243,6 +255,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicCronAmeexSyncRoute: typeof ApiPublicCronAmeexSyncRoute
   ApiWebhooksAmeexProviderIdRoute: typeof ApiWebhooksAmeexProviderIdRoute
   ApiWebhooksSheetsIdRoute: typeof ApiWebhooksSheetsIdRoute
   ApiWebhooksShopifyStoreIdRoute: typeof ApiWebhooksShopifyStoreIdRoute
@@ -376,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhooksAmeexProviderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/ameex-sync': {
+      id: '/api/public/cron/ameex-sync'
+      path: '/api/public/cron/ameex-sync'
+      fullPath: '/api/public/cron/ameex-sync'
+      preLoaderRoute: typeof ApiPublicCronAmeexSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -416,6 +436,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicCronAmeexSyncRoute: ApiPublicCronAmeexSyncRoute,
   ApiWebhooksAmeexProviderIdRoute: ApiWebhooksAmeexProviderIdRoute,
   ApiWebhooksSheetsIdRoute: ApiWebhooksSheetsIdRoute,
   ApiWebhooksShopifyStoreIdRoute: ApiWebhooksShopifyStoreIdRoute,
