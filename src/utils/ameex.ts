@@ -97,22 +97,37 @@ export function buildAmeexParcelPayload({
 
   const fromStock = stockItemsCount > 0;
 
-  const cityValue = order.ameex_city_id?.trim() || order.city || "1";
+  // Ameex API parses lowercase keys (YOUR-DATA echo confirmed: city, phone, address...).
+  // City MUST be the numeric Ameex city ID, otherwise Ameex replies "Veuillez choisir une ville".
+  const cityValue = order.ameex_city_id?.trim() || "";
 
   const payload: Record<string, any> = {
-    ORDER_NUM: order.ameex_order_label?.trim() || order.reference,
-    RECEIVER: order.customer_name,
-    PHONE: order.customer_phone,
-    CITY: cityValue,
-    ADDRESS: order.shipping_address || "N/A",
-    COD: codAmount,
-    COMMENT: comment,
-    NATURE_PRODUCT: itemSummary || "Produit",
-    PRODUCTS: productsMap,
+    type: fromStock ? "STOCK" : "SAMPLE",
+    order_num: order.ameex_order_label?.trim() || order.reference,
+    receiver: order.customer_name,
+    phone: order.customer_phone,
+    city: cityValue,
+    address: order.shipping_address || "N/A",
+    cod: codAmount,
+    comment: comment,
+    nature_product: itemSummary || "Produit",
+    fragile: "0",
+    replace: "false",
+    open: "YES",
+    try: "YES",
   };
 
+  // Ameex expects products as products[i][ref] / products[i][qty] keys (flat),
+  // not a nested PRODUCTS object. Mirror exactly what the working PHP sends.
+  let i = 0;
+  for (const [sku, qty] of Object.entries(productsMap)) {
+    payload[`products[${i}][ref]`] = sku;
+    payload[`products[${i}][qty]`] = qty;
+    i++;
+  }
+
   if (businessId) {
-    payload.BUSINESS = businessId;
+    payload.business = businessId;
   }
 
   if (!businessId) {
