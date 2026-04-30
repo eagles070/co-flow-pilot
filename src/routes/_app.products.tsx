@@ -186,7 +186,11 @@ function ProductsPage() {
     return items.filter((p) => {
       if (search) {
         const q = search.toLowerCase();
-        if (!p.name.toLowerCase().includes(q) && !(p.sku ?? "").toLowerCase().includes(q))
+        if (
+          !p.name.toLowerCase().includes(q) &&
+          !(p.sku ?? "").toLowerCase().includes(q) &&
+          !(p.sku_ameex ?? "").toLowerCase().includes(q)
+        )
           return false;
       }
       if (statusFilter !== "all" && getStatus(p.stock, p.low_stock_threshold) !== statusFilter)
