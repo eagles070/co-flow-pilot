@@ -256,6 +256,7 @@ function ProductsPage() {
     const payload = {
       ...form,
       sku: form.sku || null,
+      sku_ameex: form.sku_ameex || null,
       description: form.description || null,
       image_url: form.image_url || null,
       supplier_id: form.supplier_id || null,
