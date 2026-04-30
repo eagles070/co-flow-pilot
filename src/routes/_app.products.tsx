@@ -621,34 +621,45 @@ function ProductsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>External SKU</Label>
+                  <Label>Internal SKU</Label>
                   <Input
-                    placeholder="From delivery provider"
+                    placeholder="Your internal reference"
                     value={form.sku ?? ""}
                     onChange={(e) => setForm({ ...form, sku: e.target.value })}
                   />
                 </div>
                 <div>
-                  <Label>Supplier</Label>
-                  <Select
-                    value={form.supplier_id ?? "none"}
-                    onValueChange={(v) =>
-                      setForm({ ...form, supplier_id: v === "none" ? null : v })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="None" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {suppliers.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Ameex SKU *</Label>
+                  <Input
+                    placeholder="SKU from Ameex stock"
+                    value={form.sku_ameex ?? ""}
+                    onChange={(e) => setForm({ ...form, sku_ameex: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Required to send orders to Ameex as a stock parcel.
+                  </p>
                 </div>
+              </div>
+              <div>
+                <Label>Supplier</Label>
+                <Select
+                  value={form.supplier_id ?? "none"}
+                  onValueChange={(v) =>
+                    setForm({ ...form, supplier_id: v === "none" ? null : v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
