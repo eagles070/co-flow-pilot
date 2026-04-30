@@ -747,7 +747,15 @@ function ProductsPage() {
                   </div>
                 )}
                 <div className="flex-1 space-y-1 text-sm">
-                  <div className="text-muted-foreground">SKU: {detail.sku ?? "—"}</div>
+                  <div className="text-muted-foreground">Internal SKU: {detail.sku ?? "—"}</div>
+                  <div className="text-muted-foreground">
+                    Ameex SKU:{" "}
+                    {detail.sku_ameex ? (
+                      <span className="font-mono text-foreground">{detail.sku_ameex}</span>
+                    ) : (
+                      <span className="text-destructive">missing</span>
+                    )}
+                  </div>
                   <div className="text-muted-foreground">
                     Supplier: {supplierName(detail.supplier_id)}
                   </div>
