@@ -65,6 +65,7 @@ interface Product {
   id: string;
   name: string;
   sku: string | null;
+  sku_ameex: string | null;
   description: string | null;
   cost_price: number;
   sell_price: number;
