@@ -473,8 +473,8 @@ function ProductsPage() {
               <TableRow>
                 <TableHead className="w-[60px]"></TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Internal ID</TableHead>
-                <TableHead>External SKU</TableHead>
+                <TableHead>Internal SKU</TableHead>
+                <TableHead>Ameex SKU</TableHead>
                 <TableHead className="text-right">Stock</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Supplier</TableHead>
