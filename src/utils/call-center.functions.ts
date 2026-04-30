@@ -74,17 +74,18 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     for (const item of items) {
       const matchedProduct = await resolveProductForOrderItem(db, item);
       const productId = matchedProduct?.id ?? null;
+      const ameexSku = matchedProduct?.sku_ameex?.trim() || null;
 
       ameexItems.push({
         // Keep the human-readable order label as the original product name.
-        // Ameex stock matching uses `sku` only inside buildAmeexParcelForm.
+        // Ameex stock matching uses the Ameex SKU (sku_ameex) — NOT our internal sku.
         product_name: item.product_name,
         quantity: item.quantity,
-        sku: matchedProduct?.sku ?? null,
+        sku: ameexSku,
       });
 
-      if (!matchedProduct?.sku?.trim()) {
-        ameexSkuErrors.push(`Missing SKU for "${item.product_name}"`);
+      if (!ameexSku) {
+        ameexSkuErrors.push(`Missing Ameex SKU for "${item.product_name}"`);
       }
 
       if (!productId) {
@@ -105,7 +106,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       if (smErr) {
         stockErrors.push(`Stock for "${item.product_name}": ${smErr.message}`);
       } else {
-        stockApplied.push(matchedProduct?.sku?.trim() || item.product_name);
+        stockApplied.push(ameexSku || matchedProduct?.sku?.trim() || item.product_name);
       }
     }
 
@@ -115,7 +116,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
         stock: { applied: stockApplied, errors: stockErrors },
         ameex: {
           ok: false,
-          error: `Parcel blocked: ${ameexSkuErrors.join(", ")}. Match each order item to a product with a valid SKU before sending to Ameex.`,
+          error: `Parcel blocked: ${ameexSkuErrors.join(", ")}. Open the product in Products and fill the "Ameex SKU" field with the SKU shown in the Ameex stock.`,
         },
       };
     }
