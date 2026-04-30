@@ -737,6 +737,7 @@ export type Database = {
           name: string
           sell_price: number
           sku: string | null
+          sku_ameex: string | null
           stock: number
           supplier_id: string | null
           updated_at: string
@@ -753,6 +754,7 @@ export type Database = {
           name: string
           sell_price?: number
           sku?: string | null
+          sku_ameex?: string | null
           stock?: number
           supplier_id?: string | null
           updated_at?: string
@@ -769,6 +771,7 @@ export type Database = {
           name?: string
           sell_price?: number
           sku?: string | null
+          sku_ameex?: string | null
           stock?: number
           supplier_id?: string | null
           updated_at?: string
