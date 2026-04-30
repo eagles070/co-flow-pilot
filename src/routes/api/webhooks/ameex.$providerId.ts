@@ -1,19 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-function mapAmeexStatus(statut: string, statutS?: string) {
-  const s = (statut || "").toUpperCase();
-  const sub = (statutS || "").toUpperCase();
-  if (s === "DELIVERED") return "delivered";
-  if (s === "RETURNED") return "returned";
-  if (s === "REFUSED") return "refused";
-  if (s === "DISTRIBUTION") return "in_transit";
-  if (s === "IN_PROGRESS") {
-    if (sub === "POSTPONED") return "postponed";
-    return "in_transit";
-  }
-  return null;
-}
+import { mapAmeexStatusToCrm } from "@/utils/ameex-status";
 
 export const Route = createFileRoute("/api/webhooks/ameex/$providerId")({
   server: {
@@ -43,7 +30,7 @@ export const Route = createFileRoute("/api/webhooks/ameex/$providerId")({
           return new Response("Unauthorized", { status: 401 });
         }
 
-        // Ameex sends application/x-www-form-urlencoded
+        // Ameex sends application/x-www-form-urlencoded (sometimes JSON)
         const ct = request.headers.get("content-type") || "";
         let body: Record<string, string> = {};
         if (ct.includes("application/json")) {
@@ -56,9 +43,10 @@ export const Route = createFileRoute("/api/webhooks/ameex/$providerId")({
         const code = body.CODE || body.code;
         const statut = body.STATUT || body.statut;
         const statutS = body.STATUT_S || body.statut_s;
-        const newStatus = mapAmeexStatus(statut, statutS);
+        const comment = body.COMMENT || body.comment || "";
+        const mapping = mapAmeexStatusToCrm(statut, statutS);
 
-        if (code && newStatus) {
+        if (code && mapping) {
           const { data: del } = await supabaseAdmin
             .from("deliveries")
             .select("order_id")
@@ -66,9 +54,12 @@ export const Route = createFileRoute("/api/webhooks/ameex/$providerId")({
             .maybeSingle();
 
           if (del?.order_id) {
+            const newStatus = mapping.crmStatus;
+
             const patch: any = { status: newStatus };
             if (newStatus === "delivered") patch.delivered_at = new Date().toISOString();
-            if (newStatus === "returned") patch.returned_at = new Date().toISOString();
+            if (newStatus === "returned" || newStatus === "refused")
+              patch.returned_at = new Date().toISOString();
             await supabaseAdmin.from("orders").update(patch).eq("id", del.order_id);
 
             const delPatch: any = {};
@@ -87,6 +78,21 @@ export const Route = createFileRoute("/api/webhooks/ameex/$providerId")({
                 .update(delPatch)
                 .eq("tracking_number", code);
             }
+
+            // Append history note (mirrors PHP saveCommandHistory)
+            const histNote = [
+              `Ameex: ${statut}${statutS ? ` / ${statutS}` : ""}`,
+              comment ? `(${comment})` : "",
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .slice(0, 500);
+
+            await supabaseAdmin.from("order_status_history").insert({
+              order_id: del.order_id,
+              to_status: newStatus,
+              note: histNote,
+            });
           }
         }
 
