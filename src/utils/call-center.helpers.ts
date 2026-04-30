@@ -8,6 +8,7 @@ export type CallCenterOrderItem = {
 export type MatchedProduct = {
   id: string;
   sku: string | null;
+  sku_ameex: string | null;
   name: string;
 };
 
@@ -39,7 +40,7 @@ export async function resolveProductForOrderItem(
   if (item.product_id) {
     const { data: byId } = await db
       .from("products")
-      .select("id, sku, name")
+      .select("id, sku, sku_ameex, name")
       .eq("id", item.product_id)
       .maybeSingle();
 
@@ -49,7 +50,7 @@ export async function resolveProductForOrderItem(
   if (rawItemLabel) {
     const { data: bySku } = await db
       .from("products")
-      .select("id, sku, name")
+      .select("id, sku, sku_ameex, name")
       .eq("sku", rawItemLabel)
       .maybeSingle();
 
@@ -59,7 +60,7 @@ export async function resolveProductForOrderItem(
   if (rawItemLabel) {
     const { data: byName } = await db
       .from("products")
-      .select("id, sku, name")
+      .select("id, sku, sku_ameex, name")
       .eq("name", rawItemLabel)
       .maybeSingle();
 
@@ -69,7 +70,7 @@ export async function resolveProductForOrderItem(
   if (looseNamePattern) {
     const { data: fuzzyMatches } = await db
       .from("products")
-      .select("id, sku, name")
+      .select("id, sku, sku_ameex, name")
       .ilike("name", looseNamePattern)
       .limit(10);
 

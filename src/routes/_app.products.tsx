@@ -65,6 +65,7 @@ interface Product {
   id: string;
   name: string;
   sku: string | null;
+  sku_ameex: string | null;
   description: string | null;
   cost_price: number;
   sell_price: number;
@@ -153,6 +154,7 @@ function ProductsPage() {
   const empty: Omit<Product, "id" | "updated_at"> = {
     name: "",
     sku: "",
+    sku_ameex: "",
     description: "",
     cost_price: 0,
     sell_price: 0,
@@ -184,7 +186,11 @@ function ProductsPage() {
     return items.filter((p) => {
       if (search) {
         const q = search.toLowerCase();
-        if (!p.name.toLowerCase().includes(q) && !(p.sku ?? "").toLowerCase().includes(q))
+        if (
+          !p.name.toLowerCase().includes(q) &&
+          !(p.sku ?? "").toLowerCase().includes(q) &&
+          !(p.sku_ameex ?? "").toLowerCase().includes(q)
+        )
           return false;
       }
       if (statusFilter !== "all" && getStatus(p.stock, p.low_stock_threshold) !== statusFilter)
@@ -208,6 +214,7 @@ function ProductsPage() {
     setForm({
       name: p.name,
       sku: p.sku ?? "",
+      sku_ameex: p.sku_ameex ?? "",
       description: p.description ?? "",
       cost_price: Number(p.cost_price),
       sell_price: Number(p.sell_price),
@@ -253,6 +260,7 @@ function ProductsPage() {
     const payload = {
       ...form,
       sku: form.sku || null,
+      sku_ameex: form.sku_ameex || null,
       description: form.description || null,
       image_url: form.image_url || null,
       supplier_id: form.supplier_id || null,
@@ -469,8 +477,8 @@ function ProductsPage() {
               <TableRow>
                 <TableHead className="w-[60px]"></TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Internal ID</TableHead>
-                <TableHead>External SKU</TableHead>
+                <TableHead>Internal SKU</TableHead>
+                <TableHead>Ameex SKU</TableHead>
                 <TableHead className="text-right">Stock</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Supplier</TableHead>
@@ -501,10 +509,14 @@ function ProductsPage() {
                       )}
                     </TableCell>
                     <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {p.id.slice(0, 8)}
-                    </TableCell>
                     <TableCell className="text-muted-foreground">{p.sku ?? "—"}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {p.sku_ameex ? (
+                        <span className="text-foreground">{p.sku_ameex}</span>
+                      ) : (
+                        <span className="text-destructive">— missing</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <span
                         className={
@@ -613,34 +625,45 @@ function ProductsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>External SKU</Label>
+                  <Label>Internal SKU</Label>
                   <Input
-                    placeholder="From delivery provider"
+                    placeholder="Your internal reference"
                     value={form.sku ?? ""}
                     onChange={(e) => setForm({ ...form, sku: e.target.value })}
                   />
                 </div>
                 <div>
-                  <Label>Supplier</Label>
-                  <Select
-                    value={form.supplier_id ?? "none"}
-                    onValueChange={(v) =>
-                      setForm({ ...form, supplier_id: v === "none" ? null : v })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="None" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {suppliers.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Ameex SKU *</Label>
+                  <Input
+                    placeholder="SKU from Ameex stock"
+                    value={form.sku_ameex ?? ""}
+                    onChange={(e) => setForm({ ...form, sku_ameex: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Required to send orders to Ameex as a stock parcel.
+                  </p>
                 </div>
+              </div>
+              <div>
+                <Label>Supplier</Label>
+                <Select
+                  value={form.supplier_id ?? "none"}
+                  onValueChange={(v) =>
+                    setForm({ ...form, supplier_id: v === "none" ? null : v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -728,7 +751,15 @@ function ProductsPage() {
                   </div>
                 )}
                 <div className="flex-1 space-y-1 text-sm">
-                  <div className="text-muted-foreground">SKU: {detail.sku ?? "—"}</div>
+                  <div className="text-muted-foreground">Internal SKU: {detail.sku ?? "—"}</div>
+                  <div className="text-muted-foreground">
+                    Ameex SKU:{" "}
+                    {detail.sku_ameex ? (
+                      <span className="font-mono text-foreground">{detail.sku_ameex}</span>
+                    ) : (
+                      <span className="text-destructive">missing</span>
+                    )}
+                  </div>
                   <div className="text-muted-foreground">
                     Supplier: {supplierName(detail.supplier_id)}
                   </div>
