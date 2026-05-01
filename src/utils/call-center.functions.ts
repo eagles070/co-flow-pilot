@@ -208,7 +208,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     let parsed: any = null;
     try {
       res = await fetch(url, {
-        method: "PUT",
+        method: "POST",
         headers: getAmeexHeaders(provider),
         body,
       });
