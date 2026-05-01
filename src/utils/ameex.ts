@@ -9,7 +9,7 @@ type AmeexOrder = {
   customer_name: string;
   customer_phone: string;
   city: string | null;
-  /** Numeric Ameex city ID (e.g. "21"). When present, takes priority over `city` name. */
+  /** Canonical Ameex city label. This endpoint accepts the city name, not the numeric ID. */
   ameex_city_id?: string | null;
   ameex_order_label?: string | null;
   shipping_address: string | null;
@@ -97,8 +97,9 @@ export function buildAmeexParcelPayload({
   const fromStock = stockItemsCount > 0;
 
   // Ameex only reads the parcel fields reliably when they are sent in the
-  // legacy uppercase JSON shape. City still needs the canonical Ameex city id.
-  const cityValue = order.ameex_city_id?.trim() || "";
+  // legacy uppercase JSON shape. For this endpoint, CITY must be the city name
+  // (ex: "Marrakech"), not the numeric city id.
+  const cityValue = order.city?.trim() || "";
 
   const payload: Record<string, any> = {
     TYPE: fromStock ? "STOCK" : "SAMPLE",
