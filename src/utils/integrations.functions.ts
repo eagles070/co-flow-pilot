@@ -567,7 +567,7 @@ export const sendOrderToAmeex = createServerFn({ method: "POST" })
     const res = await fetch(url, {
       method: "PUT",
       headers: getAmeexHeaders(provider),
-      body: JSON.stringify(ameexPayload),
+      body: encodeAmeexBody(ameexPayload),
     });
     const text = await res.text();
     const parsed = parseAmeexResponse(text);
