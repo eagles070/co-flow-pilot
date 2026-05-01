@@ -163,26 +163,27 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       };
     }
 
-    // 4) Resolve Ameex city ID from our cities table (matched by name)
-    let ameexCityId: string | null = null;
+    // 4) Resolve the canonical city label. Ameex accepts the city name here,
+    // not the numeric city id.
+    let ameexCityName: string | null = order.city?.trim() || null;
     if (order.city) {
       const { data: cityRow } = await db
         .from("cities")
-        .select("ameex_city_id")
+        .select("name")
         .ilike("name", order.city)
         .maybeSingle();
-      ameexCityId = (cityRow as any)?.ameex_city_id || null;
+      ameexCityName = (cityRow as any)?.name?.trim() || ameexCityName;
     }
 
-    if (!ameexCityId || !/^\d+$/.test(String(ameexCityId).trim())) {
+    if (!ameexCityName) {
       return {
         ok: false,
         stock: { applied: stockApplied, errors: stockErrors },
         ameex: {
           ok: false,
           error: order.city
-            ? `City "${order.city}" is not mapped to a valid numeric Ameex city ID. Open Settings → Cities and pick the matching Ameex city.`
-            : "Order has no city. Edit the order and pick a city, then map it in Settings → Cities.",
+            ? `City "${order.city}" is invalid for Ameex. Edit the order and use the Ameex city name.`
+            : "Order has no city. Edit the order and pick a city before sending to Ameex.",
         },
       };
     }
@@ -193,7 +194,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     const { payload: ameexPayload, fromStock } = buildAmeexParcelPayload({
       order: {
         ...order,
-        ameex_city_id: ameexCityId,
+        city: ameexCityName,
         ameex_order_label: agentDisplayName || order.reference,
       } as any,
       items: ameexItems,
