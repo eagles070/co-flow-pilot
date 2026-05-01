@@ -152,13 +152,27 @@ export function getAmeexEndpoint(provider: AmeexProvider, fromStock: boolean): s
     : `${base}/customer/Parcels/AddParcel`;
 }
 
-/** Headers for Ameex API requests (matches the working PHP cURL setup). */
+/** Headers for Ameex API requests (matches the working PHP cURL setup).
+ * PHP sends CURLOPT_POSTFIELDS as an array → cURL serializes it as
+ * application/x-www-form-urlencoded. We must mirror that exactly, otherwise
+ * Ameex returns "Destinataire: est obligatoire" because it cannot parse JSON.
+ */
 export function getAmeexHeaders(provider: AmeexProvider): Record<string, string> {
   return {
-    "Content-Type": "application/json",
+    "Content-Type": "application/x-www-form-urlencoded",
     "X-AUTH-ID": provider.api_id || "",
     "X-AUTH-KEY": provider.api_key || "",
   };
+}
+
+/** Encode a payload object as application/x-www-form-urlencoded, matching PHP. */
+export function encodeAmeexBody(payload: Record<string, any>): string {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(payload)) {
+    if (v === undefined || v === null) continue;
+    params.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+  }
+  return params.toString();
 }
 
 export function parseAmeexResponse(text: string): any {
