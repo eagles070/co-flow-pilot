@@ -9,7 +9,7 @@ type AmeexOrder = {
   customer_name: string;
   customer_phone: string;
   city: string | null;
-  /** Numeric Ameex city ID (e.g. "21"). When present, takes priority over `city` name. */
+  /** Canonical Ameex city label. This endpoint accepts the city name, not the numeric ID. */
   ameex_city_id?: string | null;
   ameex_order_label?: string | null;
   shipping_address: string | null;
@@ -54,13 +54,12 @@ export function getAmeexApiBase(provider: AmeexProvider): string {
 }
 
 /**
- * Build the JSON payload Ameex expects for a stock-based parcel.
- * Mirrors the working PHP implementation:
- *   - PRODUCTS = { sku: qty } object
- *   - Uppercase field names
- *   - When at least one SKU is provided -> `fromStock=true` and we hit
- *     /customer/Parcels/AddParcelStock with PUT + JSON.
- *   - Otherwise -> /customer/Parcels/AddParcel (sample/manual).
+ * Build the JSON payload Ameex actually accepts for stock parcels.
+ * Direct API verification showed the accepted shape is:
+ *   - PUT + application/json
+ *   - Uppercase keys
+ *   - PRODUCTS object map: { SKU: qty }
+ * Lowercase / form-data variants made Ameex drop receiver/phone/address.
  */
 export function buildAmeexParcelPayload({
   order,
@@ -97,37 +96,31 @@ export function buildAmeexParcelPayload({
 
   const fromStock = stockItemsCount > 0;
 
-  // Ameex API parses lowercase keys (YOUR-DATA echo confirmed: city, phone, address...).
-  // City MUST be the numeric Ameex city ID, otherwise Ameex replies "Veuillez choisir une ville".
-  const cityValue = order.ameex_city_id?.trim() || "";
+  // Ameex only reads the parcel fields reliably when they are sent in the
+  // legacy uppercase JSON shape. For this endpoint, CITY must be the city name
+  // (ex: "Marrakech"), not the numeric city id.
+  const cityValue = order.city?.trim() || "";
 
   const payload: Record<string, any> = {
-    type: fromStock ? "STOCK" : "SAMPLE",
-    order_num: order.ameex_order_label?.trim() || order.reference,
-    receiver: order.customer_name,
-    phone: order.customer_phone,
-    city: cityValue,
-    address: order.shipping_address || "N/A",
-    cod: codAmount,
-    comment: comment,
-    nature_product: itemSummary || "Produit",
-    fragile: "0",
-    replace: "false",
-    open: "YES",
-    try: "YES",
+    TYPE: fromStock ? "STOCK" : "SAMPLE",
+    ORDER_NUM: order.ameex_order_label?.trim() || order.reference,
+    RECEIVER: order.customer_name,
+    PHONE: order.customer_phone,
+    CITY: cityValue,
+    ADDRESS: order.shipping_address || "N/A",
+    COD: codAmount,
+    COMMENT: comment,
+    NATURE_PRODUCT: itemSummary || "Produit",
+    REPLACE: "false",
+    OPEN: "YES",
+    TRY: "YES",
+    FRAGILE: "0",
   };
 
-  // Ameex expects products as products[i][ref] / products[i][qty] keys (flat),
-  // not a nested PRODUCTS object. Mirror exactly what the working PHP sends.
-  let i = 0;
-  for (const [sku, qty] of Object.entries(productsMap)) {
-    payload[`products[${i}][ref]`] = sku;
-    payload[`products[${i}][qty]`] = qty;
-    i++;
-  }
+  if (fromStock) payload.PRODUCTS = productsMap;
 
   if (businessId) {
-    payload.business = businessId;
+    payload.BUSINESS = businessId;
   }
 
   if (!businessId) {
@@ -161,17 +154,14 @@ export function getAmeexHeaders(provider: AmeexProvider): Record<string, string>
   return {
     "X-AUTH-ID": provider.api_id || "",
     "X-AUTH-KEY": provider.api_key || "",
+    Accept: "application/json",
+    "Content-Type": "application/json",
   };
 }
 
-/** Encode a payload object as multipart/form-data (FormData), matching PHP cURL. */
-export function encodeAmeexBody(payload: Record<string, any>): FormData {
-  const form = new FormData();
-  for (const [k, v] of Object.entries(payload)) {
-    if (v === undefined || v === null) continue;
-    form.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
-  }
-  return form;
+/** Encode a payload object as JSON, matching the Ameex variant that preserves all fields. */
+export function encodeAmeexBody(payload: Record<string, any>): string {
+  return JSON.stringify(payload);
 }
 
 export function parseAmeexResponse(text: string): any {
@@ -192,6 +182,8 @@ export function isAmeexSuccessResponse(payload: any) {
 
 export function getAmeexErrorMessage(payload: any): string | null {
   return (
+    payload?.["ADD-PARCEL"]?.MESSAGE ||
+    payload?.["PARCEL_INFO"]?.RESULT?.MESSAGE ||
     payload?.api?.msg ||
     payload?.message ||
     payload?.error ||
