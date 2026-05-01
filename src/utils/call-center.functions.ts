@@ -200,7 +200,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     });
 
     const url = getAmeexEndpoint(provider, fromStock);
-    const body = JSON.stringify(ameexPayload);
+    const body = encodeAmeexBody(ameexPayload);
 
     let res: Response;
     let text = "";
