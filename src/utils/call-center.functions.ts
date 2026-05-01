@@ -187,7 +187,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
       };
     }
 
-    // 5) Push to Ameex (PHP-compatible: PUT + JSON to /Parcels/AddParcelStock)
+    // 5) Push to Ameex (verified working variant: PUT + JSON + uppercase keys)
     const agentDisplayName = await resolveAgentDisplayName(db, userId);
 
     const { payload: ameexPayload, fromStock } = buildAmeexParcelPayload({
@@ -208,7 +208,7 @@ export const confirmOrderAndShip = createServerFn({ method: "POST" })
     let parsed: any = null;
     try {
       res = await fetch(url, {
-        method: "POST",
+        method: "PUT",
         headers: getAmeexHeaders(provider),
         body,
       });
