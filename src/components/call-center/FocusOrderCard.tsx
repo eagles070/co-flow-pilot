@@ -306,7 +306,34 @@ export function FocusOrderCard({
             <TabsTrigger value="timeline" className="relative h-12 rounded-none border-b-2 border-transparent bg-transparent px-1 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
               Timeline
             </TabsTrigger>
-          </TabsList>
+      </div>
+
+      {relaunchCandidate && (
+        <div className="flex items-center gap-3 border-b border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-5 py-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              ⚠ Relaunch available for this product and city
+            </div>
+            <div className="text-xs text-amber-800/80 dark:text-amber-300/80">
+              Old parcel <span className="font-mono font-medium">#{relaunchCandidate.reference}</span>
+              {" · "}previous status: <span className="font-medium">{relaunchCandidate.status.replace("_", " ")}</span>
+              {" · "}tracking: <span className="font-mono">{relaunchCandidate.parcel_code}</span>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={onRelaunch}
+            disabled={relaunching || saving}
+            className="bg-amber-600 text-white hover:bg-amber-700"
+          >
+            {relaunching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            Relaunch Customer
+          </Button>
+        </div>
+      )}
           <Badge variant="outline" className="gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600">
             <ShoppingBag className="h-3 w-3" />{sourceLabel}
           </Badge>
