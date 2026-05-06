@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShoppingBag, FileSpreadsheet, Truck, Copy, Trash2, Send, Plus, Pencil, Plug, CheckCircle2, AlertCircle, ExternalLink, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { ShoppingBag, FileSpreadsheet, Truck, Copy, Trash2, Send, Plus, Pencil, Plug, CheckCircle2, AlertCircle, ExternalLink, Eye, EyeOff, RefreshCw, Webhook, MapPin, Zap, Package, PhoneOff, XCircle, RotateCcw, Clock, CheckCheck, Boxes, Sparkles } from "lucide-react";
 import {
   listIntegrations,
   createShopifyStore,
@@ -72,27 +72,40 @@ function IntegrationsPage() {
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Integrations"
-        description="Connect Shopify, Google Sheets and delivery providers."
-      />
-      <SectionHeader
-        icon={Plug}
-        title="Connected Channels"
-        description="Manage external systems feeding orders into your CRM"
-        variant="primary"
-      />
-      <Tabs defaultValue="shopify" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="shopify">
-            <ShoppingBag className="mr-2 h-4 w-4" /> Shopify
+    <div className="space-y-6">
+      {/* Modern gradient hero */}
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary via-primary/80 to-primary-glow p-6 sm:p-8 text-primary-foreground shadow-xl">
+        <div className="absolute -top-20 -right-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-24 -left-10 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-xs font-medium">
+              <Sparkles className="h-3.5 w-3.5" /> Integrations Hub
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Integrations</h1>
+            <p className="text-sm sm:text-base text-primary-foreground/80 max-w-xl">
+              Connect Shopify stores, Google Sheets and delivery providers — manage every channel from one clean dashboard.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl bg-white/15 backdrop-blur px-3 py-2 text-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+              <span className="font-medium">{(data?.shopify?.length ?? 0) + (data?.sheets?.length ?? 0) + (data?.providers?.length ?? 0)} connected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Tabs defaultValue="delivery" className="space-y-5">
+        <TabsList className="bg-card border border-border/60 p-1 rounded-2xl shadow-sm h-auto">
+          <TabsTrigger value="delivery" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 px-4 py-2">
+            <Truck className="h-4 w-4" /> Delivery
           </TabsTrigger>
-          <TabsTrigger value="sheets">
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Google Sheets
+          <TabsTrigger value="shopify" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 px-4 py-2">
+            <ShoppingBag className="h-4 w-4" /> Shopify
           </TabsTrigger>
-          <TabsTrigger value="delivery">
-            <Truck className="mr-2 h-4 w-4" /> Delivery Providers
+          <TabsTrigger value="sheets" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 px-4 py-2">
+            <FileSpreadsheet className="h-4 w-4" /> Google Sheets
           </TabsTrigger>
         </TabsList>
 
@@ -205,18 +218,31 @@ function ShopifyTab({
 
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
+    <div className="space-y-6">
+      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 p-6 sm:p-7 text-white shadow-lg">
+        <div className="absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-white/15 backdrop-blur p-3"><ShoppingBag className="h-7 w-7" /></div>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold tracking-tight">Shopify</h2>
+              <p className="text-sm text-white/80 max-w-md">Receive new orders automatically via webhooks from your Shopify stores.</p>
+            </div>
+          </div>
+          <Button onClick={() => setOpen(true)} className="bg-white text-teal-700 hover:bg-white/90 rounded-xl shadow-md">
+            <Plus className="mr-1.5 h-4 w-4" /> Add store
+          </Button>
+        </div>
+      </div>
+
+    <Card className="rounded-2xl border-border/60 shadow-sm">
+      <CardHeader>
         <div>
-          <CardTitle>Shopify stores</CardTitle>
+          <CardTitle>Connected stores</CardTitle>
           <CardDescription>
-            Receive new orders automatically via webhooks. Configure each store in Shopify
-            Admin → Settings → Notifications → Webhooks.
+            Manage Shopify webhooks. Configure each store in Shopify Admin → Settings → Notifications → Webhooks.
           </CardDescription>
         </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add store
-        </Button>
       </CardHeader>
       <CardContent>
         <div className="mb-4 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 space-y-3">
@@ -454,6 +480,7 @@ function ShopifyTab({
         </DialogContent>
       </Dialog>
     </Card>
+    </div>
   );
 }
 
@@ -1048,83 +1075,166 @@ function DeliveryTab({
   });
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <div>
-          <CardTitle>Delivery providers</CardTitle>
-          <CardDescription>
-            Send confirmed orders to your carrier and receive automatic status updates.
-          </CardDescription>
+    <div className="space-y-6">
+      {/* Section header card with actions */}
+      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 p-6 sm:p-7 text-white shadow-lg">
+        <div className="absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-white/15 backdrop-blur p-3">
+              <Truck className="h-7 w-7" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold tracking-tight">Delivery</h2>
+              <p className="text-sm text-white/80 max-w-md">
+                Connect carrier APIs, sync shipment statuses, and trigger pickup requests in real time.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setOpen(true)} className="bg-white text-violet-700 hover:bg-white/90 rounded-xl shadow-md">
+              <Plus className="mr-1.5 h-4 w-4" /> Add Company
+            </Button>
+            <Button variant="outline" className="rounded-xl bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white">
+              <Webhook className="mr-1.5 h-4 w-4" /> Webhook Logs
+            </Button>
+            <Button variant="outline" className="rounded-xl bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white">
+              <Package className="mr-1.5 h-4 w-4" /> Pickup Request
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add provider
-        </Button>
-      </CardHeader>
-      <CardContent>
+      </div>
+
+      {/* API Configuration */}
+      <Card className="rounded-2xl border-border/60 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-primary/10 p-2">
+              <Zap className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">API Configuration</CardTitle>
+              <CardDescription>Global endpoints used to communicate with carriers</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <ConfigField label="API Base URL" value="https://api.ameex.app" />
+            <ConfigField label="Auth Headers" value="C-Api-Id, C-Api-Key" mono />
+            <div className="md:col-span-2">
+              <ConfigField label="Webhook URL" value={`${baseUrl}/api/webhooks/ameex/{provider_id}`} mono />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Provider cards */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Delivery Providers</h3>
+          <span className="text-xs text-muted-foreground">{providers.length} connected</span>
+        </div>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <Card className="rounded-2xl"><CardContent className="py-8 text-sm text-muted-foreground">Loading…</CardContent></Card>
         ) : providers.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No delivery providers connected yet.</p>
+          <Card className="rounded-2xl border-dashed">
+            <CardContent className="py-12 text-center">
+              <Truck className="mx-auto h-10 w-10 text-muted-foreground/40" />
+              <p className="mt-3 text-sm text-muted-foreground">No delivery providers connected yet.</p>
+              <Button className="mt-4 rounded-xl" onClick={() => setOpen(true)}>
+                <Plus className="mr-1.5 h-4 w-4" /> Add your first provider
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Webhook URL</TableHead>
-                <TableHead>Last sync</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {providers.map((p) => {
-                const url = `${baseUrl}/api/webhooks/ameex/${p.id}?token=${p.webhook_token}`;
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{p.provider_type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => copy(url)}>
-                        <Copy className="mr-1 h-3 w-3" /> Copy URL
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {providers.map((p, idx) => {
+              const url = `${baseUrl}/api/webhooks/ameex/${p.id}?token=${p.webhook_token}`;
+              return (
+                <Card key={p.id} className="rounded-2xl border-border/60 shadow-sm hover:shadow-md transition-shadow group">
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground font-bold text-lg shadow-md">
+                          {p.name?.[0]?.toUpperCase() ?? "D"}
+                        </div>
+                        <div>
+                          <div className="font-semibold leading-tight">{p.name}</div>
+                          <div className="text-xs text-muted-foreground capitalize">{p.provider_type}</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 rounded-full text-[10px] gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
+                        </Badge>
+                        {idx === 0 && (
+                          <Badge variant="outline" className="rounded-full text-[10px] border-primary/30 text-primary">Default</Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-muted/50 px-3 py-2 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Provider ID</div>
+                        <code className="font-mono text-xs truncate block">{p.id}</code>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copy(url)} title="Copy webhook URL">
+                        <Copy className="h-3.5 w-3.5" />
                       </Button>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {p.last_sync_at ? new Date(p.last_sync_at).toLocaleString() : "Never"}
-                    </TableCell>
-                    <TableCell className="space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => testMut.mutate(p.id)}
-                        disabled={testMut.isPending}
-                      >
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      Last sync: {p.last_sync_at ? new Date(p.last_sync_at).toLocaleString() : "Never"}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <Button variant="outline" size="sm" className="rounded-xl" onClick={() => testMut.mutate(p.id)} disabled={testMut.isPending}>
                         <Send className="mr-1 h-3 w-3" /> Test
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(p)}
-                        title="Edit"
-                      >
-                        <Pencil className="h-4 w-4" />
+                      <Button variant="outline" size="sm" className="rounded-xl">
+                        <MapPin className="mr-1 h-3 w-3" /> Cities
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => del({ data: { id: p.id } }).then(onChange)}
-                      >
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="outline" size="sm" className="rounded-xl" onClick={() => openEdit(p)}>
+                        <Pencil className="mr-1 h-3 w-3" /> Edit
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      <Button variant="outline" size="sm" className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => del({ data: { id: p.id } }).then(onChange)}>
+                        <Trash2 className="mr-1 h-3 w-3" /> Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         )}
-      </CardContent>
+      </div>
+
+      {/* Status mapping */}
+      <Card className="rounded-2xl border-border/60 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-primary/10 p-2">
+              <Boxes className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Delivery Status Mapping</CardTitle>
+              <CardDescription>How carrier statuses map into your CRM pipeline</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <StatusChip icon={Truck} label="In Progress" tone="blue" />
+            <StatusChip icon={CheckCheck} label="Delivered" tone="emerald" />
+            <StatusChip icon={XCircle} label="Cancelled" tone="rose" />
+            <StatusChip icon={PhoneOff} label="No Answer" tone="amber" />
+            <StatusChip icon={RotateCcw} label="Return" tone="orange" />
+            <StatusChip icon={Clock} label="Postponed" tone="violet" />
+            <StatusChip icon={Package} label="Distribution" tone="indigo" />
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -1247,7 +1357,7 @@ function DeliveryTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }
 
@@ -1301,5 +1411,40 @@ function LogsPanel({ logs }: { logs: any[] }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// -------------------- HELPERS --------------------
+
+function ConfigField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</Label>
+      <div className="flex items-center gap-1.5">
+        <Input value={value} readOnly className={`rounded-xl bg-muted/40 border-border/60 ${mono ? "font-mono text-xs" : ""}`} />
+        <Button variant="outline" size="icon" className="rounded-xl shrink-0" onClick={() => copy(value)}>
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const TONE_MAP: Record<string, string> = {
+  blue: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  emerald: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  rose: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30",
+  amber: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  orange: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30",
+  violet: "bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30",
+  indigo: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30",
+};
+
+function StatusChip({ icon: Icon, label, tone }: { icon: any; label: string; tone: string }) {
+  return (
+    <div className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${TONE_MAP[tone] ?? ""}`}>
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </div>
   );
 }
