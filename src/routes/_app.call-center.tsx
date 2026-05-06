@@ -107,6 +107,34 @@ function CallCenterPage() {
 
   useEffect(() => { refreshPendingCount(); }, [refreshPendingCount]);
 
+  // Realtime: refresh pending count + relaunch candidate when orders change
+  useEffect(() => {
+    const channel = supabase
+      .channel("call-center-orders-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        async (payload) => {
+          refreshPendingCount();
+          const newRow = (payload.new ?? {}) as { id?: string; relaunch_eligible?: boolean; status?: string };
+          if (current?.id) {
+            // Re-check relaunch candidate when any other order becomes eligible / status changes
+            if (newRow.id && newRow.id !== current.id) {
+              try {
+                const { candidate } = await findRelaunchCandidate({ data: { order_id: current.id } });
+                setRelaunchCandidate(candidate ?? null);
+                if (candidate && !relaunchCandidate) {
+                  toast.info(`Relaunch available · Parcel ${candidate.parcel_code}`);
+                }
+              } catch { /* ignore */ }
+            }
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [refreshPendingCount, current?.id, relaunchCandidate]);
+
   // Call timer
   useEffect(() => {
     if (timerRef.current) window.clearInterval(timerRef.current);
