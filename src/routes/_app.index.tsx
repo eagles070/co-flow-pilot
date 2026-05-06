@@ -19,6 +19,7 @@ import { ConfirmationFunnel } from "@/components/dashboard/ConfirmationFunnel";
 import { PerformanceList } from "@/components/dashboard/PerformanceLists";
 import { LiveFeed } from "@/components/dashboard/LiveFeed";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { TeamOnline } from "@/components/dashboard/TeamOnline";
 
 export const Route = createFileRoute("/_app/")({
   component: Dashboard,
@@ -256,9 +257,14 @@ function Dashboard() {
           />
         </section>
 
-        {/* Live feed */}
-        <section>
-          <LiveFeed orders={data.recentOrders} activity={data.recentActivity} />
+        {/* Team online + Live feed */}
+        <section className="grid gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-1">
+            <TeamOnline />
+          </div>
+          <div className="lg:col-span-2">
+            <LiveFeed orders={data.recentOrders} activity={data.recentActivity} />
+          </div>
         </section>
       </div>
     </div>
