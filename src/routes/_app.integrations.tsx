@@ -1399,3 +1399,38 @@ function LogsPanel({ logs }: { logs: any[] }) {
     </Card>
   );
 }
+
+// -------------------- HELPERS --------------------
+
+function ConfigField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</Label>
+      <div className="flex items-center gap-1.5">
+        <Input value={value} readOnly className={`rounded-xl bg-muted/40 border-border/60 ${mono ? "font-mono text-xs" : ""}`} />
+        <Button variant="outline" size="icon" className="rounded-xl shrink-0" onClick={() => copy(value)}>
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const TONE_MAP: Record<string, string> = {
+  blue: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  emerald: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  rose: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30",
+  amber: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  orange: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30",
+  violet: "bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30",
+  indigo: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30",
+};
+
+function StatusChip({ icon: Icon, label, tone }: { icon: any; label: string; tone: string }) {
+  return (
+    <div className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium ${TONE_MAP[tone] ?? ""}`}>
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </div>
+  );
+}
