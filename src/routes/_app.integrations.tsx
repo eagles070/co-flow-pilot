@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShoppingBag, FileSpreadsheet, Truck, Copy, Trash2, Send, Plus, Pencil, Plug, CheckCircle2, AlertCircle, ExternalLink, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { ShoppingBag, FileSpreadsheet, Truck, Copy, Trash2, Send, Plus, Pencil, Plug, CheckCircle2, AlertCircle, ExternalLink, Eye, EyeOff, RefreshCw, Webhook, MapPin, Zap, Package, PhoneOff, XCircle, RotateCcw, Clock, CheckCheck, Boxes, Sparkles } from "lucide-react";
 import {
   listIntegrations,
   createShopifyStore,
