@@ -77,7 +77,7 @@ export function TeamOnline() {
 
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel(`presence:online:${Math.random().toString(36).slice(2)}`, {
+    const channel = supabase.channel("online-users", {
       config: { presence: { key: user.id } },
     });
     const sync = () => {
