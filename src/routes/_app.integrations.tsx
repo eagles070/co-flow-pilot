@@ -72,27 +72,40 @@ function IntegrationsPage() {
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Integrations"
-        description="Connect Shopify, Google Sheets and delivery providers."
-      />
-      <SectionHeader
-        icon={Plug}
-        title="Connected Channels"
-        description="Manage external systems feeding orders into your CRM"
-        variant="primary"
-      />
-      <Tabs defaultValue="shopify" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="shopify">
-            <ShoppingBag className="mr-2 h-4 w-4" /> Shopify
+    <div className="space-y-6">
+      {/* Modern gradient hero */}
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary via-primary/80 to-primary-glow p-6 sm:p-8 text-primary-foreground shadow-xl">
+        <div className="absolute -top-20 -right-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-24 -left-10 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-xs font-medium">
+              <Sparkles className="h-3.5 w-3.5" /> Integrations Hub
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Integrations</h1>
+            <p className="text-sm sm:text-base text-primary-foreground/80 max-w-xl">
+              Connect Shopify stores, Google Sheets and delivery providers — manage every channel from one clean dashboard.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl bg-white/15 backdrop-blur px-3 py-2 text-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+              <span className="font-medium">{(data?.shopify?.length ?? 0) + (data?.sheets?.length ?? 0) + (data?.providers?.length ?? 0)} connected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Tabs defaultValue="delivery" className="space-y-5">
+        <TabsList className="bg-card border border-border/60 p-1 rounded-2xl shadow-sm h-auto">
+          <TabsTrigger value="delivery" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 px-4 py-2">
+            <Truck className="h-4 w-4" /> Delivery
           </TabsTrigger>
-          <TabsTrigger value="sheets">
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Google Sheets
+          <TabsTrigger value="shopify" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 px-4 py-2">
+            <ShoppingBag className="h-4 w-4" /> Shopify
           </TabsTrigger>
-          <TabsTrigger value="delivery">
-            <Truck className="mr-2 h-4 w-4" /> Delivery Providers
+          <TabsTrigger value="sheets" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 px-4 py-2">
+            <FileSpreadsheet className="h-4 w-4" /> Google Sheets
           </TabsTrigger>
         </TabsList>
 
