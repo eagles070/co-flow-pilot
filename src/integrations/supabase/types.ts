@@ -643,6 +643,7 @@ export type Database = {
           agent_id: string | null
           attempts: number
           city: string | null
+          comment_colis: string | null
           confirmed_at: string | null
           created_at: string
           customer_name: string
@@ -650,7 +651,9 @@ export type Database = {
           customer_phone_alt: string | null
           delivered_at: string | null
           delivery_cost: number
+          discount_amount: number
           external_order_id: string | null
+          extra_amount: number
           id: string
           notes: string | null
           reference: string
@@ -662,12 +665,14 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
           store_id: string | null
           total_amount: number
+          tracking_number: string | null
           updated_at: string
         }
         Insert: {
           agent_id?: string | null
           attempts?: number
           city?: string | null
+          comment_colis?: string | null
           confirmed_at?: string | null
           created_at?: string
           customer_name: string
@@ -675,7 +680,9 @@ export type Database = {
           customer_phone_alt?: string | null
           delivered_at?: string | null
           delivery_cost?: number
+          discount_amount?: number
           external_order_id?: string | null
+          extra_amount?: number
           id?: string
           notes?: string | null
           reference?: string
@@ -687,12 +694,14 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           store_id?: string | null
           total_amount?: number
+          tracking_number?: string | null
           updated_at?: string
         }
         Update: {
           agent_id?: string | null
           attempts?: number
           city?: string | null
+          comment_colis?: string | null
           confirmed_at?: string | null
           created_at?: string
           customer_name?: string
@@ -700,7 +709,9 @@ export type Database = {
           customer_phone_alt?: string | null
           delivered_at?: string | null
           delivery_cost?: number
+          discount_amount?: number
           external_order_id?: string | null
+          extra_amount?: number
           id?: string
           notes?: string | null
           reference?: string
@@ -712,6 +723,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           store_id?: string | null
           total_amount?: number
+          tracking_number?: string | null
           updated_at?: string
         }
         Relationships: [
