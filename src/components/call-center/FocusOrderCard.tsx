@@ -99,7 +99,7 @@ function paletteFor(key: string) {
   return STATUS_PALETTE[key] ?? { dot: "bg-muted-foreground", ring: "ring-muted-foreground/30", bg: "bg-muted/40", text: "text-foreground" };
 }
 
-interface TimelineEvent { ts: string; title: string; detail?: string | null; tone: "info" | "success" | "warn" | "danger" | "muted"; }
+interface TimelineEvent { ts: string; title: string; detail?: string | null; actor?: string | null; tone: "info" | "success" | "warn" | "danger" | "muted"; }
 
 export function FocusOrderCard({
   order, statuses, callSeconds, blacklisted, repeatCount, maxAttempts, saving,
