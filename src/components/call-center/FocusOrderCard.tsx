@@ -297,17 +297,6 @@ export function FocusOrderCard({
         </Button>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-        <div className="flex items-center justify-between border-b px-5">
-          <TabsList className="h-12 gap-2 bg-transparent p-0">
-            <TabsTrigger value="details" className="relative h-12 rounded-none border-b-2 border-transparent bg-transparent px-1 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-              Details
-            </TabsTrigger>
-            <TabsTrigger value="timeline" className="relative h-12 rounded-none border-b-2 border-transparent bg-transparent px-1 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-              Timeline
-            </TabsTrigger>
-      </div>
-
       {relaunchCandidate && (
         <div className="flex items-center gap-3 border-b border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-5 py-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400">
@@ -334,6 +323,17 @@ export function FocusOrderCard({
           </Button>
         </div>
       )}
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+        <div className="flex items-center justify-between border-b px-5">
+          <TabsList className="h-12 gap-2 bg-transparent p-0">
+            <TabsTrigger value="details" className="relative h-12 rounded-none border-b-2 border-transparent bg-transparent px-1 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="timeline" className="relative h-12 rounded-none border-b-2 border-transparent bg-transparent px-1 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+              Timeline
+            </TabsTrigger>
+          </TabsList>
           <Badge variant="outline" className="gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600">
             <ShoppingBag className="h-3 w-3" />{sourceLabel}
           </Badge>
