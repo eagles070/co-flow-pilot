@@ -1061,83 +1061,166 @@ function DeliveryTab({
   });
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <div>
-          <CardTitle>Delivery providers</CardTitle>
-          <CardDescription>
-            Send confirmed orders to your carrier and receive automatic status updates.
-          </CardDescription>
+    <div className="space-y-6">
+      {/* Section header card with actions */}
+      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 p-6 sm:p-7 text-white shadow-lg">
+        <div className="absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-white/15 backdrop-blur p-3">
+              <Truck className="h-7 w-7" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold tracking-tight">Delivery</h2>
+              <p className="text-sm text-white/80 max-w-md">
+                Connect carrier APIs, sync shipment statuses, and trigger pickup requests in real time.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setOpen(true)} className="bg-white text-violet-700 hover:bg-white/90 rounded-xl shadow-md">
+              <Plus className="mr-1.5 h-4 w-4" /> Add Company
+            </Button>
+            <Button variant="outline" className="rounded-xl bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white">
+              <Webhook className="mr-1.5 h-4 w-4" /> Webhook Logs
+            </Button>
+            <Button variant="outline" className="rounded-xl bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white">
+              <Package className="mr-1.5 h-4 w-4" /> Pickup Request
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add provider
-        </Button>
-      </CardHeader>
-      <CardContent>
+      </div>
+
+      {/* API Configuration */}
+      <Card className="rounded-2xl border-border/60 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-primary/10 p-2">
+              <Zap className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">API Configuration</CardTitle>
+              <CardDescription>Global endpoints used to communicate with carriers</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <ConfigField label="API Base URL" value="https://api.ameex.app" />
+            <ConfigField label="Auth Headers" value="C-Api-Id, C-Api-Key" mono />
+            <div className="md:col-span-2">
+              <ConfigField label="Webhook URL" value={`${baseUrl}/api/webhooks/ameex/{provider_id}`} mono />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Provider cards */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Delivery Providers</h3>
+          <span className="text-xs text-muted-foreground">{providers.length} connected</span>
+        </div>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <Card className="rounded-2xl"><CardContent className="py-8 text-sm text-muted-foreground">Loading…</CardContent></Card>
         ) : providers.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No delivery providers connected yet.</p>
+          <Card className="rounded-2xl border-dashed">
+            <CardContent className="py-12 text-center">
+              <Truck className="mx-auto h-10 w-10 text-muted-foreground/40" />
+              <p className="mt-3 text-sm text-muted-foreground">No delivery providers connected yet.</p>
+              <Button className="mt-4 rounded-xl" onClick={() => setOpen(true)}>
+                <Plus className="mr-1.5 h-4 w-4" /> Add your first provider
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Webhook URL</TableHead>
-                <TableHead>Last sync</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {providers.map((p) => {
-                const url = `${baseUrl}/api/webhooks/ameex/${p.id}?token=${p.webhook_token}`;
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{p.provider_type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => copy(url)}>
-                        <Copy className="mr-1 h-3 w-3" /> Copy URL
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {providers.map((p, idx) => {
+              const url = `${baseUrl}/api/webhooks/ameex/${p.id}?token=${p.webhook_token}`;
+              return (
+                <Card key={p.id} className="rounded-2xl border-border/60 shadow-sm hover:shadow-md transition-shadow group">
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground font-bold text-lg shadow-md">
+                          {p.name?.[0]?.toUpperCase() ?? "D"}
+                        </div>
+                        <div>
+                          <div className="font-semibold leading-tight">{p.name}</div>
+                          <div className="text-xs text-muted-foreground capitalize">{p.provider_type}</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 rounded-full text-[10px] gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
+                        </Badge>
+                        {idx === 0 && (
+                          <Badge variant="outline" className="rounded-full text-[10px] border-primary/30 text-primary">Default</Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-muted/50 px-3 py-2 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Provider ID</div>
+                        <code className="font-mono text-xs truncate block">{p.id}</code>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copy(url)} title="Copy webhook URL">
+                        <Copy className="h-3.5 w-3.5" />
                       </Button>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {p.last_sync_at ? new Date(p.last_sync_at).toLocaleString() : "Never"}
-                    </TableCell>
-                    <TableCell className="space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => testMut.mutate(p.id)}
-                        disabled={testMut.isPending}
-                      >
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      Last sync: {p.last_sync_at ? new Date(p.last_sync_at).toLocaleString() : "Never"}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <Button variant="outline" size="sm" className="rounded-xl" onClick={() => testMut.mutate(p.id)} disabled={testMut.isPending}>
                         <Send className="mr-1 h-3 w-3" /> Test
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(p)}
-                        title="Edit"
-                      >
-                        <Pencil className="h-4 w-4" />
+                      <Button variant="outline" size="sm" className="rounded-xl">
+                        <MapPin className="mr-1 h-3 w-3" /> Cities
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => del({ data: { id: p.id } }).then(onChange)}
-                      >
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="outline" size="sm" className="rounded-xl" onClick={() => openEdit(p)}>
+                        <Pencil className="mr-1 h-3 w-3" /> Edit
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      <Button variant="outline" size="sm" className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => del({ data: { id: p.id } }).then(onChange)}>
+                        <Trash2 className="mr-1 h-3 w-3" /> Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         )}
-      </CardContent>
+      </div>
+
+      {/* Status mapping */}
+      <Card className="rounded-2xl border-border/60 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-primary/10 p-2">
+              <Boxes className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Delivery Status Mapping</CardTitle>
+              <CardDescription>How carrier statuses map into your CRM pipeline</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <StatusChip icon={Truck} label="In Progress" tone="blue" />
+            <StatusChip icon={CheckCheck} label="Delivered" tone="emerald" />
+            <StatusChip icon={XCircle} label="Cancelled" tone="rose" />
+            <StatusChip icon={PhoneOff} label="No Answer" tone="amber" />
+            <StatusChip icon={RotateCcw} label="Return" tone="orange" />
+            <StatusChip icon={Clock} label="Postponed" tone="violet" />
+            <StatusChip icon={Package} label="Distribution" tone="indigo" />
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
