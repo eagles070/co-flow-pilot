@@ -543,28 +543,28 @@ export function FocusOrderCard({
             ) : timeline.length === 0 ? (
               <p className="text-sm text-muted-foreground">No activity yet.</p>
             ) : (
-              <ol className="space-y-3">
+              <ol className="relative space-y-5 border-l-2 border-border/60 pl-6">
                 {timeline.map((e, idx) => {
-                  const toneColors = {
-                    info: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-                    success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                    warn: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-                    danger: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-                    muted: "bg-muted text-muted-foreground",
+                  const dotColor = {
+                    info: "bg-blue-500 ring-blue-500/20",
+                    success: "bg-emerald-500 ring-emerald-500/20",
+                    warn: "bg-amber-500 ring-amber-500/20",
+                    danger: "bg-rose-500 ring-rose-500/20",
+                    muted: "bg-muted-foreground ring-muted-foreground/20",
                   }[e.tone];
                   return (
-                    <li key={idx} className="flex gap-3 rounded-lg border bg-card p-3">
-                      <div className={cn("grid h-8 w-8 shrink-0 place-content-center rounded-full", toneColors)}>
-                        {e.tone === "success" ? <CheckCircle2 className="h-4 w-4" />
-                          : e.tone === "danger" ? <X className="h-4 w-4" />
-                          : e.tone === "warn" ? <Clock className="h-4 w-4" />
-                          : <RefreshCw className="h-4 w-4" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{e.title}</div>
-                        {e.detail && <div className="mt-0.5 text-xs text-muted-foreground">{e.detail}</div>}
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {new Date(e.ts).toLocaleString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    <li key={idx} className="relative">
+                      <span className={cn("absolute -left-[31px] top-1.5 grid h-3.5 w-3.5 place-content-center rounded-full ring-4 ring-offset-0", dotColor)} />
+                      <div className="rounded-xl border bg-card px-4 py-3 shadow-sm">
+                        <div className="text-sm font-medium text-foreground">{e.title}</div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          {e.actor && (
+                            <span className="font-medium text-foreground/80">{e.actor}</span>
+                          )}
+                          <span>·</span>
+                          <span>
+                            {new Date(e.ts).toLocaleString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </span>
                         </div>
                       </div>
                     </li>
