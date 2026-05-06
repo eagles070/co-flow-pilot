@@ -656,8 +656,12 @@ export type Database = {
           extra_amount: number
           id: string
           notes: string | null
+          previous_status: string | null
           reference: string
           region: string | null
+          relaunch_eligible: boolean
+          relaunched_at: string | null
+          relaunched_by: string | null
           returned_at: string | null
           shipped_at: string | null
           shipping_address: string | null
@@ -685,8 +689,12 @@ export type Database = {
           extra_amount?: number
           id?: string
           notes?: string | null
+          previous_status?: string | null
           reference?: string
           region?: string | null
+          relaunch_eligible?: boolean
+          relaunched_at?: string | null
+          relaunched_by?: string | null
           returned_at?: string | null
           shipped_at?: string | null
           shipping_address?: string | null
@@ -714,8 +722,12 @@ export type Database = {
           extra_amount?: number
           id?: string
           notes?: string | null
+          previous_status?: string | null
           reference?: string
           region?: string | null
+          relaunch_eligible?: boolean
+          relaunched_at?: string | null
+          relaunched_by?: string | null
           returned_at?: string | null
           shipped_at?: string | null
           shipping_address?: string | null
@@ -924,6 +936,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      relaunch_logs: {
+        Row: {
+          comments: string | null
+          created_at: string
+          id: string
+          new_order_id: string | null
+          order_id: string
+          parcel_code: string | null
+          previous_status: string | null
+          relaunched_by: string | null
+          response: Json | null
+          status: string
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string
+          id?: string
+          new_order_id?: string | null
+          order_id: string
+          parcel_code?: string | null
+          previous_status?: string | null
+          relaunched_by?: string | null
+          response?: Json | null
+          status?: string
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string
+          id?: string
+          new_order_id?: string | null
+          order_id?: string
+          parcel_code?: string | null
+          previous_status?: string | null
+          relaunched_by?: string | null
+          response?: Json | null
+          status?: string
+        }
+        Relationships: []
       }
       shopify_stores: {
         Row: {

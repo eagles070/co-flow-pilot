@@ -48,6 +48,14 @@ interface ProductOpt {
 }
 interface CityOpt { id: string; name: string }
 
+interface RelaunchCandidate {
+  order_id: string;
+  reference: string;
+  status: string;
+  previous_status?: string | null;
+  parcel_code: string;
+}
+
 interface Props {
   order: FocusOrder;
   statuses: StatusOpt[];
@@ -61,6 +69,9 @@ interface Props {
   /** Apply a status (and trigger ameex ship if confirmed). */
   onApplyStatus: (status: OrderStatus) => Promise<void>;
   onClose: () => void;
+  relaunchCandidate?: RelaunchCandidate | null;
+  relaunching?: boolean;
+  onRelaunch?: () => void;
 }
 
 export interface SavePatch {
@@ -104,6 +115,7 @@ interface TimelineEvent { ts: string; title: string; detail?: string | null; act
 export function FocusOrderCard({
   order, statuses, callSeconds, blacklisted, repeatCount, maxAttempts, saving,
   onSaveChanges, onApplyStatus, onClose,
+  relaunchCandidate, relaunching, onRelaunch,
 }: Props) {
   const [tab, setTab] = useState<"details" | "timeline">("details");
   const [products, setProducts] = useState<ProductOpt[]>([]);
@@ -284,6 +296,33 @@ export function FocusOrderCard({
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {relaunchCandidate && (
+        <div className="flex items-center gap-3 border-b border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-5 py-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              ⚠ Relaunch available for this product and city
+            </div>
+            <div className="text-xs text-amber-800/80 dark:text-amber-300/80">
+              Old parcel <span className="font-mono font-medium">#{relaunchCandidate.reference}</span>
+              {" · "}previous status: <span className="font-medium">{relaunchCandidate.status.replace("_", " ")}</span>
+              {" · "}tracking: <span className="font-mono">{relaunchCandidate.parcel_code}</span>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={onRelaunch}
+            disabled={relaunching || saving}
+            className="bg-amber-600 text-white hover:bg-amber-700"
+          >
+            {relaunching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            Relaunch Customer
+          </Button>
+        </div>
+      )}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
         <div className="flex items-center justify-between border-b px-5">

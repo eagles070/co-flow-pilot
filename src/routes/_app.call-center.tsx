@@ -12,6 +12,7 @@ import { AlertTriangle, Headphones, History, Loader2, PhoneCall, Play, RotateCcw
 import { HistoriqueTab } from "@/components/call-center/HistoriqueTab";
 import type { StatusOpt } from "@/components/call-center/ChangeStatusDialog";
 import { confirmOrderAndShip } from "@/utils/call-center.functions";
+import { findRelaunchCandidate, relaunchAmeexParcel } from "@/utils/relaunch.functions";
 import type { OrderSource, OrderStatus } from "@/lib/order-status";
 import { FocusOrderCard, type FocusOrder, type SavePatch } from "@/components/call-center/FocusOrderCard";
 
@@ -72,6 +73,10 @@ function CallCenterPage() {
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [callSeconds, setCallSeconds] = useState(0);
   const timerRef = useRef<number | null>(null);
+  const [relaunchCandidate, setRelaunchCandidate] = useState<{
+    order_id: string; reference: string; status: string; previous_status?: string | null; parcel_code: string;
+  } | null>(null);
+  const [relaunching, setRelaunching] = useState(false);
 
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "nrp_max_attempts").maybeSingle()
@@ -113,6 +118,7 @@ function CallCenterPage() {
   const resetToIdle = useCallback(() => {
     setCurrent(null);
     setMode("idle");
+    setRelaunchCandidate(null);
     refreshPendingCount();
   }, [refreshPendingCount]);
 
@@ -132,13 +138,49 @@ function CallCenterPage() {
     const o = list[0];
     setCurrent(o);
     setMode("active");
+    setRelaunchCandidate(null);
     const [bl, rp] = await Promise.all([
       supabase.from("blacklist").select("phone").eq("phone", o.customer_phone).maybeSingle(),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", o.customer_phone),
     ]);
     setBlacklisted(!!bl.data);
     setRepeatCount(Math.max(0, (rp.count ?? 1) - 1));
+    // Look up a relaunch candidate for this order
+    try {
+      const { candidate } = await findRelaunchCandidate({ data: { order_id: o.id } });
+      if (candidate) setRelaunchCandidate(candidate);
+    } catch (e: any) {
+      console.warn("[relaunch] candidate lookup failed", e?.message);
+    }
   }, [isStaff, user, refreshPendingCount]);
+
+  const handleRelaunch = useCallback(async () => {
+    if (!current || !relaunchCandidate) return;
+    setRelaunching(true);
+    try {
+      const result = await relaunchAmeexParcel({
+        data: {
+          new_order_id: current.id,
+          old_order_id: relaunchCandidate.order_id,
+          parcel_code: relaunchCandidate.parcel_code,
+        },
+      });
+      if (!result.ok) {
+        playBeep("error");
+        toast.error(`Relaunch failed: ${result.error}`, { duration: 8000 });
+      } else {
+        playBeep("success");
+        toast.success(`Customer relaunched · Parcel ${result.parcel_code}`);
+        resetToIdle();
+      }
+    } catch (e: any) {
+      playBeep("error");
+      toast.error(`Relaunch error: ${e?.message ?? e}`);
+    } finally {
+      setRelaunching(false);
+    }
+  }, [current, relaunchCandidate, resetToIdle]);
+
 
   const handleSaveChanges = useCallback(async (patch: SavePatch) => {
     if (!current) return;
@@ -294,6 +336,9 @@ function CallCenterPage() {
               onSaveChanges={handleSaveChanges}
               onApplyStatus={handleApplyStatus}
               onClose={resetToIdle}
+              relaunchCandidate={relaunchCandidate}
+              relaunching={relaunching}
+              onRelaunch={handleRelaunch}
             />
           )}
         </TabsContent>
