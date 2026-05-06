@@ -99,7 +99,7 @@ function paletteFor(key: string) {
   return STATUS_PALETTE[key] ?? { dot: "bg-muted-foreground", ring: "ring-muted-foreground/30", bg: "bg-muted/40", text: "text-foreground" };
 }
 
-interface TimelineEvent { ts: string; title: string; detail?: string | null; tone: "info" | "success" | "warn" | "danger" | "muted"; }
+interface TimelineEvent { ts: string; title: string; detail?: string | null; actor?: string | null; tone: "info" | "success" | "warn" | "danger" | "muted"; }
 
 export function FocusOrderCard({
   order, statuses, callSeconds, blacklisted, repeatCount, maxAttempts, saving,
@@ -188,11 +188,28 @@ export function FocusOrderCard({
       supabase.from("order_status_history").select("*").eq("order_id", order.id).order("created_at", { ascending: false }),
       supabase.from("call_attempts").select("*").eq("order_id", order.id).order("created_at", { ascending: false }),
     ]);
+
+    // Collect actor user IDs and resolve names
+    const userIds = new Set<string>();
+    (hist ?? []).forEach((h: any) => h.changed_by && userIds.add(h.changed_by));
+    (calls ?? []).forEach((c: any) => c.agent_id && userIds.add(c.agent_id));
+    const nameMap = new Map<string, string>();
+    if (userIds.size > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", Array.from(userIds));
+      (profs ?? []).forEach((p: any) => {
+        nameMap.set(p.id, p.full_name?.trim() || p.email || "Unknown");
+      });
+    }
+
     const evts: TimelineEvent[] = [];
     evts.push({
       ts: order.created_at,
       title: "Order received via webhook",
       detail: order.source,
+      actor: order.source,
       tone: "info",
     });
     (hist ?? []).forEach((h: any) => {
@@ -203,22 +220,23 @@ export function FocusOrderCard({
       evts.push({
         ts: h.created_at,
         title: `Changed status to ${h.to_status.replace("_", " ")}`,
-        detail: h.note,
+        actor: h.changed_by ? (nameMap.get(h.changed_by) ?? "system") : "system",
         tone,
       });
     });
     (calls ?? []).forEach((c: any) => {
       evts.push({
         ts: c.created_at,
-        title: `Call: ${c.outcome.replace("_", " ")}${c.duration_seconds ? ` · ${fmtTimer(c.duration_seconds)}` : ""}`,
-        detail: c.note,
+        title: `Command entered: ${c.outcome.replace("_", " ")}${c.duration_seconds ? ` · ${fmtTimer(c.duration_seconds)}` : ""}`,
+        actor: c.agent_id ? (nameMap.get(c.agent_id) ?? "agent") : "system",
         tone: c.outcome === "confirmed" ? "success" : c.outcome === "cancelled" ? "danger" : "warn",
       });
     });
     if (order.tracking_number) {
       evts.push({
         ts: new Date().toISOString(),
-        title: `Order sent to delivery company (Ameex) — Tracking: ${order.tracking_number}`,
+        title: `Sent to Ameex — Tracking: ${order.tracking_number}`,
+        actor: "system",
         tone: "info",
       });
     }
@@ -525,28 +543,28 @@ export function FocusOrderCard({
             ) : timeline.length === 0 ? (
               <p className="text-sm text-muted-foreground">No activity yet.</p>
             ) : (
-              <ol className="space-y-3">
+              <ol className="relative space-y-5 border-l-2 border-border/60 pl-6">
                 {timeline.map((e, idx) => {
-                  const toneColors = {
-                    info: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-                    success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                    warn: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-                    danger: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-                    muted: "bg-muted text-muted-foreground",
+                  const dotColor = {
+                    info: "bg-blue-500 ring-blue-500/20",
+                    success: "bg-emerald-500 ring-emerald-500/20",
+                    warn: "bg-amber-500 ring-amber-500/20",
+                    danger: "bg-rose-500 ring-rose-500/20",
+                    muted: "bg-muted-foreground ring-muted-foreground/20",
                   }[e.tone];
                   return (
-                    <li key={idx} className="flex gap-3 rounded-lg border bg-card p-3">
-                      <div className={cn("grid h-8 w-8 shrink-0 place-content-center rounded-full", toneColors)}>
-                        {e.tone === "success" ? <CheckCircle2 className="h-4 w-4" />
-                          : e.tone === "danger" ? <X className="h-4 w-4" />
-                          : e.tone === "warn" ? <Clock className="h-4 w-4" />
-                          : <RefreshCw className="h-4 w-4" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{e.title}</div>
-                        {e.detail && <div className="mt-0.5 text-xs text-muted-foreground">{e.detail}</div>}
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {new Date(e.ts).toLocaleString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    <li key={idx} className="relative">
+                      <span className={cn("absolute -left-[31px] top-1.5 grid h-3.5 w-3.5 place-content-center rounded-full ring-4 ring-offset-0", dotColor)} />
+                      <div className="rounded-xl border bg-card px-4 py-3 shadow-sm">
+                        <div className="text-sm font-medium text-foreground">{e.title}</div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          {e.actor && (
+                            <span className="font-medium text-foreground/80">{e.actor}</span>
+                          )}
+                          <span>·</span>
+                          <span>
+                            {new Date(e.ts).toLocaleString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </span>
                         </div>
                       </div>
                     </li>
