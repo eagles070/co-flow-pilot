@@ -115,6 +115,7 @@ interface TimelineEvent { ts: string; title: string; detail?: string | null; act
 export function FocusOrderCard({
   order, statuses, callSeconds, blacklisted, repeatCount, maxAttempts, saving,
   onSaveChanges, onApplyStatus, onClose,
+  relaunchCandidate, relaunching, onRelaunch,
 }: Props) {
   const [tab, setTab] = useState<"details" | "timeline">("details");
   const [products, setProducts] = useState<ProductOpt[]>([]);
