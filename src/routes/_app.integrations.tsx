@@ -218,18 +218,31 @@ function ShopifyTab({
 
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
+    <div className="space-y-6">
+      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 p-6 sm:p-7 text-white shadow-lg">
+        <div className="absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-white/15 backdrop-blur p-3"><ShoppingBag className="h-7 w-7" /></div>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold tracking-tight">Shopify</h2>
+              <p className="text-sm text-white/80 max-w-md">Receive new orders automatically via webhooks from your Shopify stores.</p>
+            </div>
+          </div>
+          <Button onClick={() => setOpen(true)} className="bg-white text-teal-700 hover:bg-white/90 rounded-xl shadow-md">
+            <Plus className="mr-1.5 h-4 w-4" /> Add store
+          </Button>
+        </div>
+      </div>
+
+    <Card className="rounded-2xl border-border/60 shadow-sm">
+      <CardHeader>
         <div>
-          <CardTitle>Shopify stores</CardTitle>
+          <CardTitle>Connected stores</CardTitle>
           <CardDescription>
-            Receive new orders automatically via webhooks. Configure each store in Shopify
-            Admin → Settings → Notifications → Webhooks.
+            Manage Shopify webhooks. Configure each store in Shopify Admin → Settings → Notifications → Webhooks.
           </CardDescription>
         </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add store
-        </Button>
       </CardHeader>
       <CardContent>
         <div className="mb-4 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 space-y-3">
