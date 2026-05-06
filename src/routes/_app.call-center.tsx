@@ -336,6 +336,9 @@ function CallCenterPage() {
               onSaveChanges={handleSaveChanges}
               onApplyStatus={handleApplyStatus}
               onClose={resetToIdle}
+              relaunchCandidate={relaunchCandidate}
+              relaunching={relaunching}
+              onRelaunch={handleRelaunch}
             />
           )}
         </TabsContent>
