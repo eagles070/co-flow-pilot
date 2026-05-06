@@ -480,6 +480,7 @@ function ShopifyTab({
         </DialogContent>
       </Dialog>
     </Card>
+    </div>
   );
 }
 
