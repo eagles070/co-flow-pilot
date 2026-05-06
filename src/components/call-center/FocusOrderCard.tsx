@@ -188,11 +188,28 @@ export function FocusOrderCard({
       supabase.from("order_status_history").select("*").eq("order_id", order.id).order("created_at", { ascending: false }),
       supabase.from("call_attempts").select("*").eq("order_id", order.id).order("created_at", { ascending: false }),
     ]);
+
+    // Collect actor user IDs and resolve names
+    const userIds = new Set<string>();
+    (hist ?? []).forEach((h: any) => h.changed_by && userIds.add(h.changed_by));
+    (calls ?? []).forEach((c: any) => c.agent_id && userIds.add(c.agent_id));
+    const nameMap = new Map<string, string>();
+    if (userIds.size > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", Array.from(userIds));
+      (profs ?? []).forEach((p: any) => {
+        nameMap.set(p.id, p.full_name?.trim() || p.email || "Unknown");
+      });
+    }
+
     const evts: TimelineEvent[] = [];
     evts.push({
       ts: order.created_at,
       title: "Order received via webhook",
       detail: order.source,
+      actor: order.source,
       tone: "info",
     });
     (hist ?? []).forEach((h: any) => {
@@ -203,22 +220,23 @@ export function FocusOrderCard({
       evts.push({
         ts: h.created_at,
         title: `Changed status to ${h.to_status.replace("_", " ")}`,
-        detail: h.note,
+        actor: h.changed_by ? (nameMap.get(h.changed_by) ?? "system") : "system",
         tone,
       });
     });
     (calls ?? []).forEach((c: any) => {
       evts.push({
         ts: c.created_at,
-        title: `Call: ${c.outcome.replace("_", " ")}${c.duration_seconds ? ` · ${fmtTimer(c.duration_seconds)}` : ""}`,
-        detail: c.note,
+        title: `Command entered: ${c.outcome.replace("_", " ")}${c.duration_seconds ? ` · ${fmtTimer(c.duration_seconds)}` : ""}`,
+        actor: c.agent_id ? (nameMap.get(c.agent_id) ?? "agent") : "system",
         tone: c.outcome === "confirmed" ? "success" : c.outcome === "cancelled" ? "danger" : "warn",
       });
     });
     if (order.tracking_number) {
       evts.push({
         ts: new Date().toISOString(),
-        title: `Order sent to delivery company (Ameex) — Tracking: ${order.tracking_number}`,
+        title: `Sent to Ameex — Tracking: ${order.tracking_number}`,
+        actor: "system",
         tone: "info",
       });
     }
