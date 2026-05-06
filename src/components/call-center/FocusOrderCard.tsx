@@ -298,29 +298,40 @@ export function FocusOrderCard({
       </div>
 
       {relaunchCandidate && (
-        <div className="flex items-center gap-3 border-b border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-5 py-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400">
-            <AlertTriangle className="h-4 w-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-              ⚠ Relaunch available for this product and city
+        <div className="border-b border-amber-500/30 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-orange-500/10 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 ring-2 ring-amber-500/30">
+              <AlertTriangle className="h-5 w-5" />
             </div>
-            <div className="text-xs text-amber-800/80 dark:text-amber-300/80">
-              Old parcel <span className="font-mono font-medium">#{relaunchCandidate.reference}</span>
-              {" · "}previous status: <span className="font-medium">{relaunchCandidate.status.replace("_", " ")}</span>
-              {" · "}tracking: <span className="font-mono">{relaunchCandidate.parcel_code}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-bold uppercase tracking-wide text-amber-900 dark:text-amber-200">
+                  Relaunch Match Found
+                </div>
+                <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-[10px] font-medium uppercase text-amber-800 dark:text-amber-300">
+                  {relaunchCandidate.status.replace("_", " ")}
+                </Badge>
+              </div>
+              <ul className="mt-2 grid gap-1 text-xs text-amber-900/90 dark:text-amber-200/90 sm:grid-cols-3">
+                <li className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />Same city matched</li>
+                <li className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />Same product matched</li>
+                <li className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />Old failed parcel available</li>
+              </ul>
+              <div className="mt-2 text-xs text-amber-800/80 dark:text-amber-300/80">
+                Old order <span className="font-mono font-medium">#{relaunchCandidate.reference}</span>
+                {" · "}reuse tracking <span className="font-mono font-medium">{relaunchCandidate.parcel_code}</span>
+              </div>
             </div>
+            <Button
+              size="sm"
+              onClick={onRelaunch}
+              disabled={relaunching || saving}
+              className="shrink-0 bg-amber-600 text-white shadow-sm hover:bg-amber-700"
+            >
+              {relaunching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Relaunch Customer
+            </Button>
           </div>
-          <Button
-            size="sm"
-            onClick={onRelaunch}
-            disabled={relaunching || saving}
-            className="bg-amber-600 text-white hover:bg-amber-700"
-          >
-            {relaunching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-            Relaunch Customer
-          </Button>
         </div>
       )}
 
