@@ -1343,7 +1343,7 @@ function DeliveryTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }
 
