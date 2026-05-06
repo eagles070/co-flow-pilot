@@ -131,7 +131,7 @@ export const relaunchAmeexParcel = createServerFn({ method: "POST" })
     );
     fd.append("price", String(Number(newOrder.total_amount) || 0));
 
-    let res: Response;
+    let res: Response | null = null;
     let text = "";
     let parsed: any = null;
     let errorMsg: string | null = null;
