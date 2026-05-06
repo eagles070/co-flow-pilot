@@ -118,6 +118,7 @@ function CallCenterPage() {
   const resetToIdle = useCallback(() => {
     setCurrent(null);
     setMode("idle");
+    setRelaunchCandidate(null);
     refreshPendingCount();
   }, [refreshPendingCount]);
 
@@ -137,13 +138,49 @@ function CallCenterPage() {
     const o = list[0];
     setCurrent(o);
     setMode("active");
+    setRelaunchCandidate(null);
     const [bl, rp] = await Promise.all([
       supabase.from("blacklist").select("phone").eq("phone", o.customer_phone).maybeSingle(),
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("customer_phone", o.customer_phone),
     ]);
     setBlacklisted(!!bl.data);
     setRepeatCount(Math.max(0, (rp.count ?? 1) - 1));
+    // Look up a relaunch candidate for this order
+    try {
+      const { candidate } = await findRelaunchCandidate({ data: { order_id: o.id } });
+      if (candidate) setRelaunchCandidate(candidate);
+    } catch (e: any) {
+      console.warn("[relaunch] candidate lookup failed", e?.message);
+    }
   }, [isStaff, user, refreshPendingCount]);
+
+  const handleRelaunch = useCallback(async () => {
+    if (!current || !relaunchCandidate) return;
+    setRelaunching(true);
+    try {
+      const result = await relaunchAmeexParcel({
+        data: {
+          new_order_id: current.id,
+          old_order_id: relaunchCandidate.order_id,
+          parcel_code: relaunchCandidate.parcel_code,
+        },
+      });
+      if (!result.ok) {
+        playBeep("error");
+        toast.error(`Relaunch failed: ${result.error}`, { duration: 8000 });
+      } else {
+        playBeep("success");
+        toast.success(`Customer relaunched · Parcel ${result.parcel_code}`);
+        resetToIdle();
+      }
+    } catch (e: any) {
+      playBeep("error");
+      toast.error(`Relaunch error: ${e?.message ?? e}`);
+    } finally {
+      setRelaunching(false);
+    }
+  }, [current, relaunchCandidate, resetToIdle]);
+
 
   const handleSaveChanges = useCallback(async (patch: SavePatch) => {
     if (!current) return;
