@@ -48,6 +48,14 @@ interface ProductOpt {
 }
 interface CityOpt { id: string; name: string }
 
+interface RelaunchCandidate {
+  order_id: string;
+  reference: string;
+  status: string;
+  previous_status?: string | null;
+  parcel_code: string;
+}
+
 interface Props {
   order: FocusOrder;
   statuses: StatusOpt[];
@@ -61,6 +69,9 @@ interface Props {
   /** Apply a status (and trigger ameex ship if confirmed). */
   onApplyStatus: (status: OrderStatus) => Promise<void>;
   onClose: () => void;
+  relaunchCandidate?: RelaunchCandidate | null;
+  relaunching?: boolean;
+  onRelaunch?: () => void;
 }
 
 export interface SavePatch {
