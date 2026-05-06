@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ function gradientFor(id: string) {
 }
 
 export function TeamOnline() {
+  const { user } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
 
@@ -74,7 +76,10 @@ export function TeamOnline() {
   }, []);
 
   useEffect(() => {
-    const channel = supabase.channel("presence:online");
+    if (!user) return;
+    const channel = supabase.channel("online-users", {
+      config: { presence: { key: user.id } },
+    });
     const sync = () => {
       const state = channel.presenceState() as Record<string, unknown[]>;
       setOnlineIds(new Set(Object.keys(state)));
@@ -83,11 +88,15 @@ export function TeamOnline() {
       .on("presence", { event: "sync" }, sync)
       .on("presence", { event: "join" }, sync)
       .on("presence", { event: "leave" }, sync)
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ user_id: user.id, online_at: new Date().toISOString() });
+        }
+      });
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user]);
 
   const sorted = [...members].sort((a, b) => {
     const ao = onlineIds.has(a.id) ? 0 : 1;

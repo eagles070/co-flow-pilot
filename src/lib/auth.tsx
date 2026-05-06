@@ -91,25 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Presence: track this user as online while authenticated
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase.channel("presence:online", {
-      config: { presence: { key: user.id } },
-    });
-    channel.subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await channel.track({
-          user_id: user.id,
-          online_at: new Date().toISOString(),
-        });
-      }
-    });
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
   return (
     <Ctx.Provider
       value={{
