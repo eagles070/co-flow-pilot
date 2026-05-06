@@ -73,6 +73,10 @@ function CallCenterPage() {
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [callSeconds, setCallSeconds] = useState(0);
   const timerRef = useRef<number | null>(null);
+  const [relaunchCandidate, setRelaunchCandidate] = useState<{
+    order_id: string; reference: string; status: string; previous_status?: string | null; parcel_code: string;
+  } | null>(null);
+  const [relaunching, setRelaunching] = useState(false);
 
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "nrp_max_attempts").maybeSingle()
